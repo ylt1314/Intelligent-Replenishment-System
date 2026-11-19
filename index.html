@@ -301,7 +301,9 @@
         max-width: 100% !important;
       }
       #view-color-size,
-      #view-color-size > .overflow-auto {
+      #view-color-size > .overflow-auto,
+      #view-color-share,
+      #view-color-share > .overflow-auto {
         max-height: none !important;
         overflow: visible !important;
         border: none !important;
@@ -311,7 +313,8 @@
         padding: 4px 6px !important;
         font-size: 11px !important;
       }
-      body.print-single-article #tbody-color-size > tr:not(.printing-target-row) {
+      body.print-single-article #tbody-color-size > tr:not(.printing-target-row),
+      body.print-single-color-article #tbody-color-share > tr:not(.printing-target-row) {
         display: none !important;
       }
     }
@@ -659,7 +662,7 @@
                 </div>
                 <div class="text-[10px] text-gray-400 mb-1.5">Sheet名称：补单表 / 补单数据 / 补货单</div>
                 <p class="text-gray-600 leading-relaxed font-mono text-[10.5px]">
-                  <strong>标准字段：</strong>货号、补单数量、统一货号
+                  <strong>标准字段：</strong>货号、补单数量、统一货号、补单渠道
                 </p>
               </div>
               <div class="mt-2 text-[10px] text-emerald-700 bg-emerald-50 p-1.5 rounded">
@@ -972,12 +975,16 @@
     <!-- 视图2: 【TOPN款颜色库销占比】 -->
     <section id="view-color-share" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col hidden">
       <div class="px-6 py-3.5 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
-        <div class="text-xs text-gray-500 flex items-center space-x-2">
+        <div class="text-xs text-gray-500 flex items-center space-x-2 no-print">
           <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-medium">
             <i class="fa-solid fa-hand-pointer mr-1"></i>点击表格「货号」可弹出水平横向尺码销量与偏差诊断弹窗
           </span>
+          <button id="btn-print-color-share-all" type="button" onclick="printLandscapeColorShareView()" class="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded text-xs font-semibold transition flex items-center space-x-1 shadow-2xs cursor-pointer" title="水平横向打印当前【TOPN款颜色库销占比】表，自动隐藏上方筛选条件">
+            <i class="fa-solid fa-print text-sky-600"></i>
+            <span>水平横向打印</span>
+          </button>
         </div>
-        <h2 class="text-base font-bold text-gray-900 tracking-wide text-center">TOPN款颜色库销占比</h2>
+        <h2 class="text-base font-bold text-gray-900 tracking-wide text-center">【TOPN款颜色库销占比】</h2>
         <div class="text-xs text-gray-500 flex items-center justify-end space-x-3">
           <span class="flex items-center"><span class="w-2.5 h-2.5 rounded bg-amber-200 border border-amber-400 mr-1"></span>售罄率&lt;30%</span>
           <span class="flex items-center"><span class="w-2.5 h-2.5 rounded bg-rose-200 border border-rose-400 mr-1"></span>低周转-低售罄</span>
@@ -985,7 +992,7 @@
       </div>
 
       <!-- 5维交互式切片器面板 (默认折叠，点击图标展开/关闭折叠) -->
-      <div class="px-6 py-2.5 bg-slate-50/90 border-b border-gray-200">
+      <div id="color-share-slicer-panel" class="no-print px-6 py-2.5 bg-slate-50/90 border-b border-gray-200">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2 cursor-pointer select-none" onclick="toggleColorSlicerPanel()">
             <span class="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center text-xs shadow-xs">
@@ -1464,6 +1471,7 @@
       stockMap: new Map(),
       outMap: new Map(),
       replenishmentMap: new Map(),
+      replenishmentChannelMap: new Map(),
       storeMapping: new Map(),
       stockColorsByArticle: new Map(),
       categories: new Set(),
@@ -1617,6 +1625,11 @@
         REPLENISH_STATE.set(uCode, state);
       }
       return state;
+    }
+
+    function getArticleReplenishmentChannel(uCode) {
+      const ch = STORE.replenishmentChannelMap && STORE.replenishmentChannelMap.get(uCode);
+      return ch ? String(ch).trim() : '';
     }
 
     function getArticleFixedReplenishmentTotal(uCode) {
@@ -2193,9 +2206,28 @@
       }, 80);
     }
 
+    function printLandscapeColorShareView(uCode) {
+      if (uCode) {
+        document.querySelectorAll('#tbody-color-share > tr').forEach(tr => {
+          tr.classList.toggle('printing-target-row', tr.dataset.articleCode === uCode);
+        });
+        document.body.classList.add('print-single-color-article');
+      } else {
+        document.body.classList.remove('print-single-color-article');
+      }
+      setTimeout(() => {
+        window.print();
+        document.body.classList.remove('print-single-color-article');
+        document.querySelectorAll('#tbody-color-share > tr.printing-target-row').forEach(tr => {
+          tr.classList.remove('printing-target-row');
+        });
+      }, 80);
+    }
+
     window.toggleStockoutWarningPanel = toggleStockoutWarningPanel;
     window.toggleColorSlicerPanel = toggleColorSlicerPanel;
     window.printLandscapeSizeView = printLandscapeSizeView;
+    window.printLandscapeColorShareView = printLandscapeColorShareView;
 
     function hasActiveShareSlicers() {
       return Object.values(SHARE_SLICERS).some(v => v !== 'ALL') || FILTERS.colorSkewFilter !== 'ALL';
@@ -2396,7 +2428,7 @@
         ['店铺', '店铺归类', '平台', '渠道类型', '负责人', '备注']
       ];
       const replenishmentRows = [
-        ['货号', '补单数量', '统一货号']
+        ['货号', '补单数量', '统一货号', '补单渠道']
       ];
 
       if (withData) {
@@ -2424,8 +2456,8 @@
           ['骆驼京东自营店', '京东自营', '京东', '自营电商', '李经理', '京东主力']
         );
         replenishmentRows.push(
-          ['G15M852058', 120, 'G15M852058'],
-          ['G16M171046', 72, 'G16M171046']
+          ['G15M852058', 120, 'G15M852058', '天猫/京东主推补单'],
+          ['G16M171046', 72, 'G16M171046', '全渠道常规补单']
         );
       }
 
@@ -2534,6 +2566,7 @@
           STORE.stockMap.clear();
           STORE.outMap.clear();
           STORE.replenishmentMap.clear();
+          STORE.replenishmentChannelMap.clear();
           STORE.storeMapping.clear();
           STORE.stockColorsByArticle.clear();
           STORE.categories.clear();
@@ -2598,6 +2631,7 @@
             const headerText = headerRow.map(v => String(v).trim());
             const qtyHeader = headerText.includes('补单数量') ? '补单数量'
               : (headerText.includes('补单量') ? '补单量' : (headerText.includes('订货数量') ? '订货数量' : ''));
+            const channelHeader = headerText.find(h => /补单渠道|补货渠道|渠道/.test(h)) || '';
             const hasArticleHeader = headerText.includes('货号');
             // 防止把系统导出的“颜色补单分配”结果表误识别成原始补单数据表。
             if (qtyHeader && hasArticleHeader) {
@@ -2608,10 +2642,19 @@
                 const rawUnified = cleanCode(r['统一货号']);
                 const uCode = rawUnified || STORE.codeToUnified.get(rawArticle) || rawArticle;
                 const qty = parseSafeNumber(r[qtyHeader]);
+                const chVal = channelHeader ? String(r[channelHeader] || '').trim() : '';
                 if (!uCode) return;
                 if (rawArticle) STORE.codeToUnified.set(rawArticle, uCode);
                 STORE.codeToUnified.set(uCode, uCode);
                 STORE.replenishmentMap.set(uCode, (STORE.replenishmentMap.get(uCode) || 0) + qty);
+                if (chVal) {
+                  const prevCh = STORE.replenishmentChannelMap.get(uCode) || '';
+                  const parts = prevCh ? prevCh.split(' / ') : [];
+                  if (!parts.includes(chVal)) {
+                    parts.push(chVal);
+                    STORE.replenishmentChannelMap.set(uCode, parts.join(' / '));
+                  }
+                }
                 replenishmentRowCount++;
               });
             }
@@ -3360,10 +3403,15 @@
             tr.appendChild(tdToggle);
 
             const tdCode = document.createElement('td');
-            tdCode.className = 'font-bold text-gray-900 border-t border-gray-300';
+            tdCode.className = 'font-bold text-gray-900 border-t border-gray-300 align-top py-2.5';
             tdCode.rowSpan = rowSpanCount;
+            const repChannel = getArticleReplenishmentChannel(cfg.uCode);
+            const repChannelBadge = repChannel
+              ? `<div class="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-semibold leading-tight" title="补单渠道：${repChannel}"><i class="fa-solid fa-truck-fast text-[10px] mr-1"></i>补单渠道：${repChannel}</div>`
+              : `<div class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-normal leading-tight">补单渠道：未配置</div>`;
             tdCode.innerHTML = `
               <div class="flex flex-col items-start space-y-1.5">
+                ${repChannelBadge}
                 <button type="button" onclick="openStoreColorModal('${cfg.uCode}')" class="px-2.5 py-1 rounded border border-blue-300 hover:border-blue-500 bg-transparent text-blue-600 hover:text-blue-700 font-bold transition inline-flex items-center space-x-1.5 cursor-pointer" title="点击查看该款不同店铺归类与颜色的库销明细">
                   <span>${cfg.uCode}</span>
                   <i class="fa-solid fa-store text-[10px] text-blue-500"></i>
@@ -3677,6 +3725,7 @@
 
         if (!hideTotalRow) {
           const trTotal = document.createElement('tr');
+          trTotal.dataset.articleCode = uCode;
           trTotal.className = 'article-divider-top bg-white font-bold text-gray-900';
 
           trTotal.appendChild(createLeftMergedCells(totalRowCount));
@@ -3811,6 +3860,7 @@
         // 颜色明细行
         item.colors.forEach((c, cIdx) => {
           const trColor = document.createElement('tr');
+          trColor.dataset.articleCode = uCode;
           const isFirstRowWithoutTotal = hideTotalRow && cIdx === 0;
           trColor.className = `border-t border-gray-100 hover:bg-gray-50/80 text-gray-700 ${isFirstRowWithoutTotal ? 'article-divider-top' : ''}`;
 
@@ -5115,6 +5165,7 @@
         STORE.salesList = [];
         STORE.stockMap.clear();
         STORE.outMap.clear();
+        STORE.replenishmentChannelMap.clear();
         STORE.stockColorsByArticle.clear();
         CACHED_AGG_ITEMS = null;
         REPLENISH_STATE.clear();
@@ -5128,6 +5179,10 @@
         STORE.expandedArticles.clear();
         STORE.expandedArticles.add('G15M852058');
         STORE.expandedArticles.add('G16M171046');
+        STORE.replenishmentChannelMap.set('G16M171046', '天猫/京东自营补单');
+        STORE.replenishmentChannelMap.set('G15M852058', '全渠道核心主推补单');
+        STORE.replenishmentChannelMap.set('G16S852004', '抖音/唯品会专供补单');
+        STORE.replenishmentChannelMap.set('G16S852070', '天猫旗舰店补单');
 
         const shoeImg1 = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f8fafc"/><path d="M15,65 Q30,40 50,45 Q70,48 85,60 Q75,75 50,75 Q25,75 15,65 Z" fill="%23b45309"/><path d="M25,60 Q45,35 60,40 Q75,45 80,58 Z" fill="%23fef3c7"/><circle cx="50" cy="50" r="4" fill="%2378350f"/><text x="50" y="88" font-size="9" text-anchor="middle" fill="%2394a3b8" font-family="sans-serif">CAMEL G15</text></svg>`;
         const shoeImg2 = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f8fafc"/><path d="M15,65 Q30,40 50,45 Q70,48 85,60 Q75,75 50,75 Q25,75 15,65 Z" fill="%23374151"/><path d="M25,60 Q45,35 60,40 Q75,45 80,58 Z" fill="%239ca3af"/><circle cx="50" cy="50" r="4" fill="%23111827"/><text x="50" y="88" font-size="9" text-anchor="middle" fill="%2394a3b8" font-family="sans-serif">CAMEL G16</text></svg>`;
