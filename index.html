@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>商品智能制动化补货系统</title>
+  <title>商品智能化配码补单系统</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- SheetJS (XLSX) -->
@@ -366,7 +366,7 @@
             <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
             <span>BUSINESS INTELLIGENCE SUITE</span>
           </div>
-          <h2 class="mt-5 text-2xl font-bold text-slate-900 tracking-tight leading-snug">商品智能制动化补货系统</h2>
+          <h2 class="mt-5 text-2xl font-bold text-slate-900 tracking-tight leading-snug">商品智能化配码补单系统</h2>
           <p class="mt-2 text-xs text-slate-500 leading-relaxed">面向鞋服多色多尺码的精细化库销诊断与智能补单工作台，支持多表关联聚合与实时交互测算。</p>
         </div>
 
@@ -453,7 +453,7 @@
         <i class="fa-solid fa-chart-pie"></i>
       </div>
       <div>
-        <h1 class="text-base font-bold text-gray-900 leading-tight">商品智能制动化补货系统</h1>
+        <h1 class="text-base font-bold text-gray-900 leading-tight">商品智能化配码补单系统</h1>
         <p class="text-[11px] text-gray-500">基于统一货号的多表秒级聚合引擎 (支持50万+行大数据分析)</p>
       </div>
     </div>
@@ -478,6 +478,25 @@
         <span>上传Excel工作簿</span>
         <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="hidden" />
       </label>
+
+      <!-- 保存系统状态与近5次保存记录下拉 -->
+      <div class="relative inline-flex items-center" id="save-history-container">
+        <button id="btn-save-snapshot" type="button" onclick="saveSystemSnapshot()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-l text-xs font-medium flex items-center space-x-1.5 shadow-sm transition cursor-pointer" title="保存当前所有配码补单数量、筛选条件与单款日期配置（自动保留近5次时间段记录）">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span>保存记录</span>
+        </button>
+        <button id="btn-toggle-save-history" type="button" onclick="toggleSaveHistoryMenu(event)" class="px-2 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white rounded-r border-l border-indigo-500 text-xs font-medium flex items-center space-x-1 shadow-sm transition cursor-pointer" title="查看与恢复近5次不同时间段的保存内容">
+          <span id="save-history-count-badge" class="px-1.5 py-0.2 bg-indigo-900/80 rounded-full text-[10px] font-mono">0/5</span>
+          <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
+        </button>
+        <div id="save-history-menu" class="hidden absolute right-0 top-full mt-1.5 w-80 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden" onclick="event.stopPropagation()">
+          <div class="px-3.5 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-800"><i class="fa-solid fa-clock-rotate-left text-indigo-600 mr-1.5"></i>近5次保存时间段记录</span>
+            <span class="text-[10px] text-slate-400">点击恢复对应时段状态</span>
+          </div>
+          <div id="save-history-list" class="divide-y divide-slate-100 max-h-72 overflow-y-auto"></div>
+        </div>
+      </div>
 
       <!-- 按当前筛选、切片器与补单分配结果导出Excel -->
       <button id="btn-export-excel" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium flex items-center space-x-1.5 shadow-sm transition" title="导出当前筛选结果、颜色尺码补单分配及库存明细为Excel工作簿">
@@ -744,16 +763,6 @@
             </div>
           </div>
 
-          <!-- 商品类目 (多选) -->
-          <div class="flex flex-col relative multi-select-container" data-filter-key="category">
-            <label class="text-[11px] text-gray-700 font-medium mb-1">商品类目</label>
-            <button type="button" class="multi-select-btn bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-amber-500 w-36 flex items-center justify-between text-left">
-              <span class="truncate multi-select-label">所有</span>
-              <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 ml-1.5 shrink-0"></i>
-            </button>
-            <div class="multi-select-menu hidden absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1.5 max-h-64 overflow-y-auto"></div>
-          </div>
-
           <!-- 平台/店铺 (多选) -->
           <div class="flex flex-col relative multi-select-container" data-filter-key="store">
             <label class="text-[11px] text-gray-700 font-medium mb-1">平台/店铺</label>
@@ -796,6 +805,16 @@
               <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 ml-1.5 shrink-0"></i>
             </button>
             <div class="multi-select-menu hidden absolute top-full left-0 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1.5 max-h-64 overflow-y-auto"></div>
+          </div>
+
+          <!-- 补单渠道 (支持搜索与多选) -->
+          <div class="flex flex-col relative multi-select-container" data-filter-key="replenishChannel">
+            <label class="text-[11px] text-gray-700 font-medium mb-1">补单渠道</label>
+            <button type="button" class="multi-select-btn bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-amber-500 w-40 flex items-center justify-between text-left">
+              <span class="truncate multi-select-label">所有</span>
+              <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 ml-1.5 shrink-0"></i>
+            </button>
+            <div class="multi-select-menu hidden absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1.5 max-h-72 overflow-y-auto"></div>
           </div>
 
           <!-- 排序依据 -->
@@ -873,52 +892,6 @@
         </div>
       </div>
 
-      <!-- 新增模块：【尺码预计断码提前预警模块】(默认折叠，点击图标展开/关闭折叠) -->
-      <div id="size-stockout-warning-panel" class="px-6 py-2.5 bg-gradient-to-r from-rose-50/70 via-amber-50/40 to-white border-b border-gray-200">
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center space-x-2.5 cursor-pointer select-none" onclick="toggleStockoutWarningPanel()">
-            <span class="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center text-xs shadow-xs">
-              <i class="fa-solid fa-bell"></i>
-            </span>
-            <div class="flex flex-wrap items-center gap-2">
-              <h3 class="text-xs font-bold text-slate-800">尺码断码提前预警监控中心</h3>
-              <span class="text-[11px] text-slate-500 font-mono hidden sm:inline">测算基准：预计可售天数 = 现库存 ÷ (本月销量 ÷ 30天)</span>
-            </div>
-          </div>
-
-          <button type="button" id="btn-toggle-stockout-panel" onclick="toggleStockoutWarningPanel()" class="px-2.5 py-1 rounded-md border border-rose-200 bg-white hover:bg-rose-50 text-rose-700 text-xs font-medium flex items-center space-x-1.5 shadow-2xs transition" title="点击展开或折叠尺码断码提前预警监控中心">
-            <i id="icon-toggle-stockout-panel" class="fa-solid fa-chevron-down text-[10px]"></i>
-            <span id="label-toggle-stockout-panel">展开预警</span>
-          </button>
-        </div>
-
-        <!-- 折叠内容区 -->
-        <div id="stockout-warning-body" class="hidden mt-2.5 pt-2.5 border-t border-rose-200/60 flex flex-wrap items-center justify-between gap-2">
-          <span class="text-[11px] text-slate-500 font-mono">点击右侧预警等级可快速筛选对应风险款式：</span>
-          <!-- 预警等级快速过滤按钮组 -->
-          <div class="flex flex-wrap items-center gap-1.5" id="stockout-filter-group">
-            <button type="button" onclick="setSizeStockoutFilter('ALL')" data-so-filter="ALL" class="slicer-pill active">
-              全部款 (<span id="so-count-all">0</span>)
-            </button>
-            <button type="button" onclick="setSizeStockoutFilter('RISK_ANY')" data-so-filter="RISK_ANY" class="slicer-pill">
-              ⚡ 存在断码风险款 (<span id="so-count-any" class="font-bold text-rose-600">0</span>)
-            </button>
-            <button type="button" onclick="setSizeStockoutFilter('OUT_NOW')" data-so-filter="OUT_NOW" class="slicer-pill">
-              🔴 已断码 (<span id="so-count-out" class="font-bold text-rose-600">0</span>)
-            </button>
-            <button type="button" onclick="setSizeStockoutFilter('CRITICAL')" data-so-filter="CRITICAL" class="slicer-pill">
-              🟠 ≤7天极危断码 (<span id="so-count-critical" class="font-bold text-orange-600">0</span>)
-            </button>
-            <button type="button" onclick="setSizeStockoutFilter('WARNING')" data-so-filter="WARNING" class="slicer-pill">
-              🟡 8~15天临期断码 (<span id="so-count-warning" class="font-bold text-amber-600">0</span>)
-            </button>
-            <button type="button" onclick="setSizeStockoutFilter('WATCH')" data-so-filter="WATCH" class="slicer-pill">
-              🔵 16~30天关注 (<span id="so-count-watch" class="font-bold text-sky-600">0</span>)
-            </button>
-          </div>
-        </div>
-      </div>
-
       <div class="px-6 py-2 bg-emerald-50/70 border-b border-emerald-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-emerald-800">
         <span><i class="fa-solid fa-wand-magic-sparkles mr-1"></i><strong>智能补单分配（最小化总库销占比差）：</strong>输入补单量并分配时，系统综合参考销量占比与现有库存（现库存+未出-缺货），优先向缺口较大的颜色与尺码倾斜，使补单后的「总库销占比差」尽可能缩小至接近0%。</span>
         <span class="font-semibold">颜色补单量按12的倍数分配，尺码补单量仅分配至有库存或销量的尺码并使总库销占比差最小</span>
@@ -977,7 +950,7 @@
       <div class="px-6 py-3.5 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
         <div class="text-xs text-gray-500 flex items-center space-x-2 no-print">
           <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-medium">
-            <i class="fa-solid fa-hand-pointer mr-1"></i>点击表格「货号」可弹出水平横向尺码销量与偏差诊断弹窗
+            <i class="fa-solid fa-hand-pointer mr-1"></i>点击表格「货号」可弹出不同店铺归类与颜色的库销明细弹窗
           </span>
           <button id="btn-print-color-share-all" type="button" onclick="printLandscapeColorShareView()" class="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded text-xs font-semibold transition flex items-center space-x-1 shadow-2xs cursor-pointer" title="水平横向打印当前【TOPN款颜色库销占比】表，自动隐藏上方筛选条件">
             <i class="fa-solid fa-print text-sky-600"></i>
@@ -991,143 +964,13 @@
         </div>
       </div>
 
-      <!-- 5维交互式切片器面板 (默认折叠，点击图标展开/关闭折叠) -->
-      <div id="color-share-slicer-panel" class="no-print px-6 py-2.5 bg-slate-50/90 border-b border-gray-200">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-2 cursor-pointer select-none" onclick="toggleColorSlicerPanel()">
-            <span class="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center text-xs shadow-xs">
-              <i class="fa-solid fa-sliders"></i>
-            </span>
-            <span class="text-xs font-bold text-slate-700">颜色维度交互切片器</span>
-            <span id="slicer-active-summary" class="text-[11px] text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full hidden">已启用切片过滤</span>
-          </div>
-          <div class="flex items-center space-x-2.5">
-            <button id="btn-reset-slicers" class="text-xs text-slate-500 hover:text-amber-600 flex items-center space-x-1 transition">
-              <i class="fa-solid fa-rotate-left text-[10px]"></i>
-              <span>重置切片器</span>
-            </button>
-            <button type="button" id="btn-toggle-color-slicer" onclick="toggleColorSlicerPanel()" class="px-2.5 py-1 rounded-md border border-slate-300 bg-white hover:bg-amber-50 hover:border-amber-300 text-slate-700 text-xs font-medium flex items-center space-x-1.5 shadow-2xs transition" title="点击展开或折叠颜色维度交互切片器">
-              <i id="icon-toggle-color-slicer" class="fa-solid fa-chevron-down text-[10px]"></i>
-              <span id="label-toggle-color-slicer">展开切片器</span>
-            </button>
-          </div>
-        </div>
-
-        <div id="color-slicer-body" class="hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2.5 pt-2.5 mt-2 border-t border-slate-200/80">
-          <!-- 切片1: 销量占比 -->
-          <div class="bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs">
-            <div class="text-[11px] font-semibold text-slate-600 mb-1.5 flex items-center justify-between">
-              <span>1. 销量占比</span>
-              <span class="text-[10px] text-slate-400">款内色占比</span>
-            </div>
-            <div class="flex flex-wrap gap-1" data-slicer-group="salesShare">
-              <button type="button" class="slicer-pill active" data-val="ALL">全部</button>
-              <button type="button" class="slicer-pill" data-val="HIGH">≥50% 主推色</button>
-              <button type="button" class="slicer-pill" data-val="MID">20%~50% 次主力</button>
-              <button type="button" class="slicer-pill" data-val="LOW">&lt;20% 尾部色</button>
-            </div>
-          </div>
-
-          <!-- 切片2: 总库存库销差 -->
-          <div class="bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs">
-            <div class="text-[11px] font-semibold text-slate-600 mb-1.5 flex items-center justify-between">
-              <span>2. 总库存库销差</span>
-              <span class="text-[10px] text-slate-400">总库存占比-销量占比</span>
-            </div>
-            <div class="flex flex-wrap gap-1" data-slicer-group="diff">
-              <button type="button" class="slicer-pill active" data-val="ALL">全部</button>
-              <button type="button" class="slicer-pill" data-val="OVER">&gt;+5% 库存积压</button>
-              <button type="button" class="slicer-pill" data-val="BAL">-5%~+5% 均衡</button>
-              <button type="button" class="slicer-pill" data-val="SHORT">&lt;-5% 缺口偏紧</button>
-            </div>
-          </div>
-
-          <!-- 切片3: 年售罄率 -->
-          <div class="bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs">
-            <div class="text-[11px] font-semibold text-slate-600 mb-1.5 flex items-center justify-between">
-              <span>3. 年售罄率</span>
-              <span class="text-[10px] text-slate-400">30%预警线</span>
-            </div>
-            <div class="flex flex-wrap gap-1" data-slicer-group="sellthrough">
-              <button type="button" class="slicer-pill active" data-val="ALL">全部</button>
-              <button type="button" class="slicer-pill" data-val="HIGH">≥60% 高售罄</button>
-              <button type="button" class="slicer-pill" data-val="MID">30%~60% 达标</button>
-              <button type="button" class="slicer-pill" data-val="LOW">&lt;30% 低售罄预警</button>
-            </div>
-          </div>
-
-          <!-- 切片4: 月存销比 -->
-          <div class="bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs">
-            <div class="text-[11px] font-semibold text-slate-600 mb-1.5 flex items-center justify-between">
-              <span>4. 月存销比</span>
-              <span class="text-[10px] text-slate-400">现库存/本月销量 (6.0基准)</span>
-            </div>
-            <div class="flex flex-wrap gap-1" data-slicer-group="ratio">
-              <button type="button" class="slicer-pill active" data-val="ALL">全部</button>
-              <button type="button" class="slicer-pill" data-val="FAST">≤3.0 极速周转</button>
-              <button type="button" class="slicer-pill" data-val="NORMAL">3.0~6.0 良性</button>
-              <button type="button" class="slicer-pill" data-val="SLOW">&gt;6.0 低周转</button>
-            </div>
-          </div>
-
-          <!-- 切片5: 划分 -->
-          <div class="bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs">
-            <div class="text-[11px] font-semibold text-slate-600 mb-1.5 flex items-center justify-between">
-              <span>5. 划分象限</span>
-              <span class="text-[10px] text-slate-400">周转×售罄矩阵</span>
-            </div>
-            <div class="flex flex-wrap gap-1" data-slicer-group="segment">
-              <button type="button" class="slicer-pill active" data-val="ALL">全部</button>
-              <button type="button" class="slicer-pill" data-val="高周转-高售罄">高周转-高售罄</button>
-              <button type="button" class="slicer-pill" data-val="低周转-高售罄">低周转-高售罄</button>
-              <button type="button" class="slicer-pill" data-val="高周转-低售罄">高周转-低售罄</button>
-              <button type="button" class="slicer-pill" data-val="低周转-低售罄">低周转-低售罄</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 新增模块：【款式颜色下偏诊断与预警看板】(基于总库存库销差自动识别下偏款) -->
-        <div class="mt-2.5 pt-2.5 border-t border-slate-200/90 flex flex-col">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center space-x-2">
-              <span class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[11px] font-bold flex items-center">
-                <i class="fa-solid fa-scale-unbalanced mr-1"></i>颜色下偏诊断
-              </span>
-              <span class="text-xs font-bold text-slate-800">总库存库销差 · 款式颜色下偏监控</span>
-              <span class="text-[11px] text-slate-500">（判定标准：款内主销色总库存库销差 &le;-5% 缺口下偏，或滞销色 &ge;+5% 积压下偏）</span>
-            </div>
-
-            <!-- 颜色下偏快速筛选胶囊 -->
-            <div class="flex flex-wrap items-center gap-1.5" id="color-skew-filter-group">
-              <button type="button" onclick="setColorSkewFilter('ALL')" data-skew-val="ALL" class="slicer-pill active">
-                全部款式 (<span id="skew-count-all">0</span>)
-              </button>
-              <button type="button" onclick="setColorSkewFilter('SKEWED')" data-skew-val="SKEWED" class="slicer-pill">
-                ⚠️ 颜色下偏款 (<span id="skew-count-any" class="font-bold text-rose-600">0</span>)
-              </button>
-              <button type="button" onclick="setColorSkewFilter('SEVERE')" data-skew-val="SEVERE" class="slicer-pill">
-                🔴 重度下偏 |差|≥10% (<span id="skew-count-severe" class="font-bold text-rose-700">0</span>)
-              </button>
-              <button type="button" onclick="setColorSkewFilter('SHORT_SKEW')" data-skew-val="SHORT_SKEW" class="slicer-pill">
-                🟠 主销色缺口下偏 ≤-5% (<span id="skew-count-short" class="font-bold text-orange-600">0</span>)
-              </button>
-              <button type="button" onclick="setColorSkewFilter('OVER_SKEW')" data-skew-val="OVER_SKEW" class="slicer-pill">
-                🔵 滞销色积压下偏 ≥+5% (<span id="skew-count-over" class="font-bold text-blue-600">0</span>)
-              </button>
-              <button type="button" onclick="setColorSkewFilter('BALANCED')" data-skew-val="BALANCED" class="slicer-pill">
-                ✅ 颜色结构均衡 (<span id="skew-count-bal" class="font-bold text-emerald-600">0</span>)
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="overflow-auto max-h-[calc(100vh-340px)] w-full relative">
+      <div class="overflow-auto max-h-[calc(100vh-270px)] w-full relative">
         <table class="w-full text-center bi-table border-collapse" id="table-color-share">
           <thead>
             <tr class="border-b-2 border-gray-800 text-xs text-gray-800 bg-slate-50">
               <th class="w-10 text-center"></th>
-              <th class="font-bold w-36 text-center">货号 / 图片</th>
+              <th class="font-bold w-32 text-center">货号 / 图片</th>
+              <th class="font-bold w-28 text-center no-print">销售日期</th>
               <th class="font-bold w-24 text-center">颜色</th>
               <th class="font-bold text-center">销量</th>
               <th class="font-bold text-center">现库存</th>
@@ -1136,12 +979,9 @@
               <th class="font-bold text-center text-emerald-700">补单数量</th>
               <th class="font-bold text-center">总库存</th>
               <th class="font-bold text-center w-40">销量占比</th>
-              <th class="font-bold text-center w-40">现库存占比</th>
               <th class="font-bold text-center w-40">总库存占比</th>
               <th class="font-bold text-center w-48">总库存库销差</th>
               <th class="font-bold text-center">年售罄率</th>
-              <th class="font-bold text-center">月存销比</th>
-              <th class="font-bold text-center">划分</th>
               <th class="font-bold text-center pr-4">本月销量</th>
             </tr>
           </thead>
@@ -1472,6 +1312,7 @@
       outMap: new Map(),
       replenishmentMap: new Map(),
       replenishmentChannelMap: new Map(),
+      replenishChannels: new Set(),
       storeMapping: new Map(),
       stockColorsByArticle: new Map(),
       categories: new Set(),
@@ -1494,6 +1335,7 @@
       dateEnd: '2026-10-01',
       status: [],
       season: [],
+      replenishChannel: [],
       sortBy: 'sales_desc',
       pageSize: 20,
       currentPage: 1,
@@ -1511,6 +1353,39 @@
     };
 
     let CACHED_AGG_ITEMS = null;
+    // 单款独立销售日期筛选映射 (uCode -> { start, end })，在按颜色与按尺码两个视觉窗口间同步关联
+    const ARTICLE_DATE_FILTERS = new Map();
+    const SAVE_HISTORY_KEY = 'CAMEL_SMART_REPLENISH_SAVES_V1';
+    let MEMORY_SAVE_SNAPSHOTS = [];
+
+    function getArticleDateRange(uCode) {
+      const custom = ARTICLE_DATE_FILTERS.get(uCode);
+      return {
+        start: (custom && custom.start) ? custom.start : FILTERS.dateStart,
+        end: (custom && custom.end) ? custom.end : FILTERS.dateEnd,
+        isCustom: Boolean(custom && (custom.start || custom.end))
+      };
+    }
+
+    function setArticleDateFilter(uCode, bound, val) {
+      if (!uCode) return;
+      const cur = ARTICLE_DATE_FILTERS.get(uCode) || { start: FILTERS.dateStart, end: FILTERS.dateEnd };
+      if (bound === 'start') cur.start = val || FILTERS.dateStart;
+      if (bound === 'end') cur.end = val || FILTERS.dateEnd;
+      ARTICLE_DATE_FILTERS.set(uCode, cur);
+      renderAll(true);
+      showToast(`已更新货号 ${uCode} 销售日期区间：${cur.start} 至 ${cur.end}（已同步至按尺码/按颜色视图）`);
+    }
+
+    function resetArticleDateFilter(uCode) {
+      if (!uCode) return;
+      ARTICLE_DATE_FILTERS.delete(uCode);
+      renderAll(true);
+      showToast(`已重置货号 ${uCode} 的销售日期为全局日期区间`);
+    }
+
+    window.setArticleDateFilter = setArticleDateFilter;
+    window.resetArticleDateFilter = resetArticleDateFilter;
 
     // 补单分配状态以货号/颜色为键保存，筛选、翻页和重新渲染时不会丢失。
     const REPLENISH_STATE = new Map();
@@ -1863,7 +1738,12 @@
       document.getElementById('tab-color-size').addEventListener('click', () => switchTab('color-size'));
       document.getElementById('tab-color-share').addEventListener('click', () => switchTab('color-share'));
 
+      renderSaveHistoryMenu();
       document.addEventListener('click', (e) => {
+        if (!e.target.closest('#save-history-container')) {
+          const saveMenu = document.getElementById('save-history-menu');
+          if (saveMenu) saveMenu.classList.add('hidden');
+        }
         const container = e.target.closest('.multi-select-container');
         document.querySelectorAll('.multi-select-container').forEach(el => {
           if (el !== container) {
@@ -1956,6 +1836,8 @@
         FILTERS.dateEnd = STORE.detectedMaxDate || '2026-10-01';
         FILTERS.status = [];
         FILTERS.season = [];
+        FILTERS.replenishChannel = [];
+        ARTICLE_DATE_FILTERS.clear();
         FILTERS.sortBy = 'sales_desc';
         FILTERS.pageSize = 20;
         FILTERS.currentPage = 1;
@@ -1973,32 +1855,7 @@
         showToast('已重置所有筛选条件');
       });
 
-      document.querySelectorAll('[data-slicer-group]').forEach(groupEl => {
-        const groupKey = groupEl.getAttribute('data-slicer-group');
-        groupEl.querySelectorAll('.slicer-pill').forEach(btn => {
-          btn.addEventListener('click', () => {
-            groupEl.querySelectorAll('.slicer-pill').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            SHARE_SLICERS[groupKey] = btn.getAttribute('data-val');
-            FILTERS.currentPage = 1;
-            updateSlicerSummaryBadge();
-            renderAll(false);
-          });
-        });
-      });
 
-      document.getElementById('btn-reset-slicers').addEventListener('click', () => {
-        Object.keys(SHARE_SLICERS).forEach(k => SHARE_SLICERS[k] = 'ALL');
-        document.querySelectorAll('[data-slicer-group]').forEach(groupEl => {
-          groupEl.querySelectorAll('.slicer-pill').forEach(b => {
-            b.classList.toggle('active', b.getAttribute('data-val') === 'ALL');
-          });
-        });
-        FILTERS.currentPage = 1;
-        updateSlicerSummaryBadge();
-        renderAll(false);
-        showToast('已重置颜色维度切片器');
-      });
 
       document.getElementById('excel-file-input').addEventListener('change', handleExcelUpload);
       document.getElementById('btn-download-sample-file').addEventListener('click', () => downloadStandardTemplate(true));
@@ -2145,33 +2002,9 @@
       renderAll(false);
     }
 
-    function toggleStockoutWarningPanel() {
-      const body = document.getElementById('stockout-warning-body');
-      const icon = document.getElementById('icon-toggle-stockout-panel');
-      const label = document.getElementById('label-toggle-stockout-panel');
-      if (!body) return;
-      const isHidden = body.classList.toggle('hidden');
-      if (icon) {
-        icon.className = isHidden ? 'fa-solid fa-chevron-down text-[10px]' : 'fa-solid fa-chevron-up text-[10px]';
-      }
-      if (label) {
-        label.innerText = isHidden ? '展开预警' : '收起预警';
-      }
-    }
 
-    function toggleColorSlicerPanel() {
-      const body = document.getElementById('color-slicer-body');
-      const icon = document.getElementById('icon-toggle-color-slicer');
-      const label = document.getElementById('label-toggle-color-slicer');
-      if (!body) return;
-      const isHidden = body.classList.toggle('hidden');
-      if (icon) {
-        icon.className = isHidden ? 'fa-solid fa-chevron-down text-[10px]' : 'fa-solid fa-chevron-up text-[10px]';
-      }
-      if (label) {
-        label.innerText = isHidden ? '展开切片器' : '收起切片器';
-      }
-    }
+
+
 
     window.setSizeStockoutFilter = setSizeStockoutFilter;
     window.setColorSkewFilter = setColorSkewFilter;
@@ -2224,8 +2057,6 @@
       }, 80);
     }
 
-    window.toggleStockoutWarningPanel = toggleStockoutWarningPanel;
-    window.toggleColorSlicerPanel = toggleColorSlicerPanel;
     window.printLandscapeSizeView = printLandscapeSizeView;
     window.printLandscapeColorShareView = printLandscapeColorShareView;
 
@@ -2233,17 +2064,7 @@
       return Object.values(SHARE_SLICERS).some(v => v !== 'ALL') || FILTERS.colorSkewFilter !== 'ALL';
     }
 
-    function updateSlicerSummaryBadge() {
-      const badge = document.getElementById('slicer-active-summary');
-      if (!badge) return;
-      const activeCount = Object.values(SHARE_SLICERS).filter(v => v !== 'ALL').length;
-      if (activeCount > 0) {
-        badge.innerText = `已启用 ${activeCount} 项切片过滤`;
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
-    }
+
 
     /**
      * 过滤「按颜色」视图的5维交互式切片器及颜色下偏筛选 (月存销比 = 现库存 / 本月销量)
@@ -2567,6 +2388,8 @@
           STORE.outMap.clear();
           STORE.replenishmentMap.clear();
           STORE.replenishmentChannelMap.clear();
+          STORE.replenishChannels.clear();
+          ARTICLE_DATE_FILTERS.clear();
           STORE.storeMapping.clear();
           STORE.stockColorsByArticle.clear();
           STORE.categories.clear();
@@ -2654,6 +2477,7 @@
                     parts.push(chVal);
                     STORE.replenishmentChannelMap.set(uCode, parts.join(' / '));
                   }
+                  STORE.replenishChannels.add(chVal);
                 }
                 replenishmentRowCount++;
               });
@@ -2804,6 +2628,14 @@
           return p && set.has(p.season);
         });
       }
+      if (FILTERS.replenishChannel && FILTERS.replenishChannel.length > 0) {
+        const selectedChannels = FILTERS.replenishChannel;
+        validArticles = validArticles.filter(c => {
+          const chStr = getArticleReplenishmentChannel(c) || '未配置';
+          const parts = chStr.split(' / ').map(s => s.trim());
+          return selectedChannels.some(sel => chStr === sel || parts.includes(sel));
+        });
+      }
 
       const validArticleSet = new Set(validArticles);
       const hasStoreFilter = FILTERS.store.length > 0;
@@ -2835,8 +2667,11 @@
           yData.colorYearSales.set(row.color, (yData.colorYearSales.get(row.color) || 0) + qty);
         }
 
+        const artDate = ARTICLE_DATE_FILTERS.get(row.uCode);
+        const effStartD = (artDate && artDate.start) ? artDate.start : startD;
+        const effEndD = (artDate && artDate.end) ? artDate.end : endD;
         const isCurrentMonthRow = currentMonthPrefix && row.dateStr && row.dateStr.startsWith(currentMonthPrefix) && row.dateStr <= currentMonthLatestDate;
-        const inSelectedDateRange = !(startD && row.dateStr && row.dateStr < startD) && !(endD && row.dateStr && row.dateStr > endD);
+        const inSelectedDateRange = !(effStartD && row.dateStr && row.dateStr < effStartD) && !(effEndD && row.dateStr && row.dateStr > effEndD);
         if (!isCurrentMonthRow && !inSelectedDateRange) continue;
 
         let aData = salesAgg.get(row.uCode);
@@ -3061,8 +2896,6 @@
         baseItems = computeAggregations();
       }
 
-      renderSizeStockoutWarningModule(baseItems);
-      renderColorSkewDiagnosticModule(baseItems);
 
       const displayItems = FILTERS.activeTab === 'color-share'
         ? applyColorShareSlicers(baseItems)
@@ -3097,78 +2930,9 @@
       }
     }
 
-    /**
-     * 渲染「按尺码」顶部【尺码断码提前预警监控模块】统计计数
-     */
-    function renderSizeStockoutWarningModule(baseItems) {
-      let anyRiskCount = 0;
-      let outCount = 0;
-      let criticalCount = 0;
-      let warningCount = 0;
-      let watchCount = 0;
 
-      baseItems.forEach(item => {
-        const so = item.stockoutSummary;
-        if (!so) return;
-        const isHighRisk = so.worstStatus === 'OUT_NOW' || so.worstStatus === 'CRITICAL' || so.worstStatus === 'WARNING';
-        if (isHighRisk) anyRiskCount++;
-        if (so.outNowCount > 0) outCount++;
-        if (so.criticalCount > 0) criticalCount++;
-        if (so.warningCount > 0) warningCount++;
-        if (so.watchCount > 0) watchCount++;
-      });
 
-      const elAll = document.getElementById('so-count-all');
-      const elAny = document.getElementById('so-count-any');
-      const elOut = document.getElementById('so-count-out');
-      const elCrit = document.getElementById('so-count-critical');
-      const elWarn = document.getElementById('so-count-warning');
-      const elWatch = document.getElementById('so-count-watch');
 
-      if (elAll) elAll.innerText = baseItems.length;
-      if (elAny) elAny.innerText = anyRiskCount;
-      if (elOut) elOut.innerText = outCount;
-      if (elCrit) elCrit.innerText = criticalCount;
-      if (elWarn) elWarn.innerText = warningCount;
-      if (elWatch) elWatch.innerText = watchCount;
-    }
-
-    /**
-     * 渲染「按颜色」顶部【款式颜色下偏诊断与预警模块】统计计数
-     */
-    function renderColorSkewDiagnosticModule(baseItems) {
-      let skewedCount = 0;
-      let severeCount = 0;
-      let shortSkewCount = 0;
-      let overSkewCount = 0;
-      let balancedCount = 0;
-
-      baseItems.forEach(item => {
-        const sk = item.colorSkewInfo;
-        if (!sk || !sk.isSkewed) {
-          balancedCount++;
-          return;
-        }
-        skewedCount++;
-        if (sk.skewLevel === 'SEVERE') severeCount++;
-        if (sk.shortColors.length > 0) shortSkewCount++;
-        if (sk.overColors.length > 0) overSkewCount++;
-      });
-
-      const elAll = document.getElementById('skew-count-all');
-      const elAny = document.getElementById('skew-count-any');
-      const elSev = document.getElementById('skew-count-severe');
-      const elShort = document.getElementById('skew-count-short');
-      const elOver = document.getElementById('skew-count-over');
-      const elBal = document.getElementById('skew-count-bal');
-
-      if (elAll) elAll.innerText = baseItems.length;
-      if (elAny) elAny.innerText = skewedCount;
-      if (elSev) elSev.innerText = severeCount;
-      if (elShort) elShort.innerText = shortSkewCount;
-      if (elOver) elOver.innerText = overSkewCount;
-      if (elBal) elBal.innerText = balancedCount;
-    }
 
     function updatePaginationControls(totalCount, totalPages, current) {
       document.querySelectorAll('.page-total-count').forEach(el => el.innerText = totalCount);
@@ -3273,61 +3037,36 @@
         const uCode = item.uCode;
         const p = item.product;
         const isExpanded = STORE.expandedArticles.has(uCode);
+        const colorsToShow = isExpanded ? item.colors : item.colors.slice(0, 1);
 
-        const totalBlockRows = createMetricRows({
-          uCode,
-          activeSizes,
-          isTotalGroup: true,
-          product: p,
-          colorLabel: '总计',
-          colorImg: p ? p.imgUrl : '',
-          salesTotal: item.totalSales,
-          monthSalesTotal: item.monthSales,
-          inStockTotal: item.totalInStock,
-          inTransitTotal: item.totalInTransit,
-          outTotal: item.totalOut,
-          replenishmentTotal: item.totalReplenishment || 0,
-          stockTotal: item.totalStock,
-          sizesSales: item.itemSizes.sales,
-          sizesMonthSales: item.itemSizes.monthSales,
-          sizesInStock: item.itemSizes.inStock,
-          sizesInTransit: item.itemSizes.inTransit,
-          sizesOut: item.itemSizes.out,
-          sizesReplenishment: item.itemSizes.replenishment,
-          sizesTotalStock: item.itemSizes.totalStock,
-          isExpanded
-        });
-
-        tbody.appendChild(totalBlockRows);
-
-        if (isExpanded) {
-          item.colors.forEach((c) => {
-            const colorBlock = createMetricRows({
-              uCode,
-              activeSizes,
-              isTotalGroup: false,
-              product: p,
-              colorLabel: c.color,
-              colorImg: p ? p.imgUrl : '',
-              salesTotal: c.sales,
-              monthSalesTotal: c.monthSales,
-              inStockTotal: c.inStock,
-              inTransitTotal: c.inTransit,
-              outTotal: c.out,
-              replenishmentTotal: c.replenishment || 0,
-              stockTotal: c.totalStock,
-              sizesSales: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.sales])),
-              sizesMonthSales: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.monthSales || 0])),
-              sizesInStock: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.inStock])),
-              sizesInTransit: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.inTransit])),
-              sizesOut: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.out])),
-              sizesReplenishment: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.replenishment || 0])),
-              sizesTotalStock: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.totalStock])),
-              isExpanded: true
-            });
-            tbody.appendChild(colorBlock);
+        colorsToShow.forEach((c, cIdx) => {
+          const colorBlock = createMetricRows({
+            uCode,
+            activeSizes,
+            isTotalGroup: false,
+            isFirstColorOfArticle: cIdx === 0,
+            totalColorCount: item.colors.length,
+            product: p,
+            colorLabel: c.color,
+            colorImg: p ? p.imgUrl : '',
+            salesTotal: c.sales,
+            monthSalesTotal: c.monthSales,
+            inStockTotal: c.inStock,
+            inTransitTotal: c.inTransit,
+            outTotal: c.out,
+            replenishmentTotal: c.replenishment || 0,
+            stockTotal: c.totalStock,
+            sizesSales: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.sales])),
+            sizesMonthSales: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.monthSales || 0])),
+            sizesInStock: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.inStock])),
+            sizesInTransit: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.inTransit])),
+            sizesOut: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.out])),
+            sizesReplenishment: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.replenishment || 0])),
+            sizesTotalStock: new Map(Array.from(c.sizeBreakdown.entries()).map(([sz, o]) => [sz, o.totalStock])),
+            isExpanded
           });
-        }
+          tbody.appendChild(colorBlock);
+        });
       });
     }
 
@@ -3347,11 +3086,8 @@
         { key: 'replenishment', label: '补单数量', isPct: false, isReplenishment: true },
         { key: 'totalStock', label: '总库存', isPct: false },
         { key: 'salesShare', label: '销量占比', isPct: true },
-        { key: 'inStockShare', label: '现库存占比', isPct: true },
-        { key: 'totalStockShare', label: '总库存占比', isPct: true },
-        { key: 'inStockDiffShare', label: '现库销占比差', isPct: true, isDiff: true, isInStockDiff: true },
-        { key: 'diffShare', label: '总库销占比差', isPct: true, isDiff: true, isTotalStockDiffHighlight: true },
-        { key: 'stockoutDays', label: '预计断码预警', isPct: false, isStockoutRow: true }
+        { key: 'totalStockShare', label: '总库存占比', isPct: true, isTotalStockShareOval: true },
+        { key: 'diffShare', label: '总库销占比差', isPct: true, isDiff: true, isTotalStockDiffHighlight: true }
       ];
 
       const rowSpanCount = metricDefs.length;
@@ -3377,153 +3113,99 @@
         valuesMap.totalStock[sz] = totStock;
 
         valuesMap.salesShare[sz] = cfg.salesTotal > 0 ? (s / cfg.salesTotal) * 100 : 0;
-        valuesMap.inStockShare[sz] = cfg.inStockTotal > 0 ? (curStock / cfg.inStockTotal) * 100 : 0;
         valuesMap.totalStockShare[sz] = cfg.stockTotal > 0 ? (totStock / cfg.stockTotal) * 100 : 0;
-        valuesMap.inStockDiffShare[sz] = valuesMap.inStockShare[sz] - valuesMap.salesShare[sz];
         valuesMap.diffShare[sz] = valuesMap.totalStockShare[sz] - valuesMap.salesShare[sz];
-        valuesMap.stockoutDays[sz] = calcSizeStockoutInfo(curStock, mSale, transitStock);
       });
 
       metricDefs.forEach((metric, mIdx) => {
         const tr = document.createElement('tr');
         tr.dataset.articleCode = cfg.uCode;
-        const isTopArticleDivider = cfg.isTotalGroup && mIdx === 0;
-        tr.className = `${cfg.isTotalGroup ? 'bg-gray-50/80 hover:bg-amber-50/20' : 'bg-white hover:bg-gray-50/60'} ${isTopArticleDivider ? 'article-divider-top' : ''} ${metric.isMonthSalesHighlight ? 'month-sales-highlight-row' : ''}`;
+        const isTopArticleDivider = cfg.isFirstColorOfArticle && mIdx === 0;
+        tr.className = `bg-white hover:bg-gray-50/60 ${isTopArticleDivider ? 'article-divider-top' : ''} ${metric.isMonthSalesHighlight ? 'month-sales-highlight-row' : ''}`;
 
         if (mIdx === 0) {
-          if (cfg.isTotalGroup) {
-            const tdToggle = document.createElement('td');
-            tdToggle.className = 'text-center border-t border-gray-300';
-            tdToggle.rowSpan = rowSpanCount;
+          const tdToggle = document.createElement('td');
+          tdToggle.className = 'text-center border-t border-gray-200 align-top py-3';
+          tdToggle.rowSpan = rowSpanCount;
+          if (cfg.isFirstColorOfArticle && (cfg.totalColorCount || 1) > 1) {
             tdToggle.innerHTML = `
-              <button onclick="toggleArticle('${cfg.uCode}')" title="${cfg.isExpanded ? '点击折叠' : '点击展开'}" class="w-4 h-4 rounded border border-gray-400 bg-white flex items-center justify-center text-[10px] text-gray-700 hover:border-amber-600 hover:text-amber-600 transition shadow-xs">
+              <button onclick="toggleArticle('${cfg.uCode}')" title="${cfg.isExpanded ? '点击折叠其余颜色' : '点击展开全部颜色 (' + cfg.totalColorCount + '色)'}" class="w-5 h-5 mx-auto rounded border border-gray-400 bg-white flex items-center justify-center text-[10px] text-gray-700 hover:border-amber-600 hover:text-amber-600 transition shadow-xs">
                 <i class="fa-solid fa-${cfg.isExpanded ? 'minus' : 'plus'}"></i>
               </button>
             `;
-            tr.appendChild(tdToggle);
-
-            const tdCode = document.createElement('td');
-            tdCode.className = 'font-bold text-gray-900 border-t border-gray-300 align-top py-2.5';
-            tdCode.rowSpan = rowSpanCount;
-            const repChannel = getArticleReplenishmentChannel(cfg.uCode);
-            const repChannelBadge = repChannel
-              ? `<div class="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-semibold leading-tight" title="补单渠道：${repChannel}"><i class="fa-solid fa-truck-fast text-[10px] mr-1"></i>补单渠道：${repChannel}</div>`
-              : `<div class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-normal leading-tight">补单渠道：未配置</div>`;
-            tdCode.innerHTML = `
-              <div class="flex flex-col items-start space-y-1.5">
-                ${repChannelBadge}
-                <button type="button" onclick="openStoreColorModal('${cfg.uCode}')" class="px-2.5 py-1 rounded border border-blue-300 hover:border-blue-500 bg-transparent text-blue-600 hover:text-blue-700 font-bold transition inline-flex items-center space-x-1.5 cursor-pointer" title="点击查看该款不同店铺归类与颜色的库销明细">
-                  <span>${cfg.uCode}</span>
-                  <i class="fa-solid fa-store text-[10px] text-blue-500"></i>
-                </button>
-                <button type="button" onclick="printLandscapeSizeView('${cfg.uCode}')" class="no-print px-2 py-0.5 rounded border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-700 text-[11px] font-medium transition inline-flex items-center space-x-1 cursor-pointer" title="水平横向打印该款尺码配码表，方便截图">
-                  <i class="fa-solid fa-print text-[10px]"></i>
-                  <span>横向打印配码</span>
-                </button>
-              </div>
-            `;
-            tr.appendChild(tdCode);
-
-            const tdImg = document.createElement('td');
-            tdImg.className = 'border-t border-gray-300 text-center';
-            tdImg.rowSpan = rowSpanCount;
-            tdImg.innerHTML = `
-              <div onclick="openMonthlyTrendModal('${cfg.uCode}')" title="点击查看该款每月销量趋势图与各颜色月度销量占比矩阵" class="w-16 h-16 mx-auto rounded-lg overflow-hidden border border-gray-200 hover:border-sky-400 bg-gray-50 flex items-center justify-center cursor-pointer group shadow-xs" onmouseenter="showHoverImage(event, '${cfg.colorImg}', '${cfg.uCode} (点击查看月度销量趋势)')" onmousemove="moveHoverImage(event)" onmouseleave="hideHoverImage()">
-                <img src="${cfg.colorImg}" alt="" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" onerror="this.src='https://placehold.co/80x80/f1f5f9/94a3b8?text=Shoes'" />
-              </div>
-            `;
-            tr.appendChild(tdImg);
-
-            const tdColor = document.createElement('td');
-            tdColor.className = 'font-bold text-gray-900 border-t border-gray-300 align-top py-2';
-            tdColor.rowSpan = rowSpanCount;
-            const totalBox = document.createElement('div');
-            totalBox.className = 'flex flex-col items-center space-y-2';
-            const repCard = document.createElement('div');
-            repCard.className = 'w-full rounded-lg border border-emerald-200 bg-emerald-50/70 p-1.5 flex flex-col items-center';
-            const repLabel = document.createElement('span');
-            repLabel.className = 'text-[10px] font-bold text-emerald-800 mb-1';
-            repLabel.innerText = '补单数量';
-            const qtyInput = document.createElement('input');
-            qtyInput.type = 'number';
-            qtyInput.min = '0';
-            qtyInput.step = '12';
-            qtyInput.inputMode = 'numeric';
-            qtyInput.value = String(getArticleFixedReplenishmentTotal(cfg.uCode));
-            qtyInput.className = 'replenish-qty-input';
-            qtyInput.title = '输入该款补单总量（自动按12的倍数对齐），再点击按颜色占比分配';
-            qtyInput.dataset.replenishArticle = cfg.uCode;
-            qtyInput.dataset.replenishColor = '__TOTAL__';
-            const autoBtn = document.createElement('button');
-            autoBtn.type = 'button';
-            autoBtn.className = 'replenish-auto-btn';
-            autoBtn.dataset.autoReplenish = cfg.uCode;
-            autoBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i>按颜色占比分配';
-            repCard.appendChild(repLabel);
-            repCard.appendChild(qtyInput);
-            repCard.appendChild(autoBtn);
-            const colorNameDiv = document.createElement('div');
-            colorNameDiv.className = 'font-bold text-gray-900 pt-1.5 border-t border-gray-200 w-full text-center';
-            colorNameDiv.innerText = cfg.colorLabel;
-            totalBox.appendChild(repCard);
-            totalBox.appendChild(colorNameDiv);
-            tdColor.appendChild(totalBox);
-            tr.appendChild(tdColor);
-
           } else {
-            const tdBlank = document.createElement('td');
-            tdBlank.className = 'border-t border-gray-200 text-center';
-            tdBlank.rowSpan = rowSpanCount;
-            tdBlank.innerHTML = `
-              <span class="inline-block w-3 h-3 border-l-2 border-b-2 border-gray-300 -mt-2 ml-1"></span>
+            tdToggle.innerHTML = `
+              <span class="inline-block w-3 h-3 border-l-2 border-b-2 border-gray-300 mt-1"></span>
             `;
-            tr.appendChild(tdBlank);
-
-            const tdBlankCode = document.createElement('td');
-            tdBlankCode.className = 'border-t border-gray-200 text-gray-400 text-[11px]';
-            tdBlankCode.rowSpan = rowSpanCount;
-            tr.appendChild(tdBlankCode);
-
-            const tdImg = document.createElement('td');
-            tdImg.className = 'border-t border-gray-200 text-center';
-            tdImg.rowSpan = rowSpanCount;
-            tdImg.innerHTML = `
-              <div onclick="openMonthlyTrendModal('${cfg.uCode}')" title="点击查看该款每月销量趋势图与各颜色月度销量占比矩阵" class="w-14 h-14 mx-auto rounded-lg overflow-hidden border border-gray-200 hover:border-sky-400 bg-gray-50 flex items-center justify-center cursor-pointer group shadow-xs" onmouseenter="showHoverImage(event, '${cfg.colorImg}', '${cfg.uCode} - ${cfg.colorLabel} (点击查看月度销量趋势)')" onmousemove="moveHoverImage(event)" onmouseleave="hideHoverImage()">
-                <img src="${cfg.colorImg}" alt="" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" onerror="this.src='https://placehold.co/80x80/f1f5f9/94a3b8?text=Color'" />
-              </div>
-            `;
-            tr.appendChild(tdImg);
-
-            const tdColor = document.createElement('td');
-            tdColor.className = 'text-gray-800 font-medium border-t border-gray-200 align-top py-2';
-            tdColor.rowSpan = rowSpanCount;
-            const colorBox = document.createElement('div');
-            colorBox.className = 'flex flex-col items-center space-y-2';
-            const repCard = document.createElement('div');
-            repCard.className = 'w-full rounded-lg border border-emerald-200 bg-emerald-50/50 p-1.5 flex flex-col items-center';
-            const repLabel = document.createElement('span');
-            repLabel.className = 'text-[10px] font-semibold text-emerald-700 mb-1';
-            repLabel.innerText = '补单数量';
-            const qtyInput = document.createElement('input');
-            qtyInput.type = 'number';
-            qtyInput.min = '0';
-            qtyInput.step = '12';
-            qtyInput.inputMode = 'numeric';
-            qtyInput.value = String(getColorReplenishmentTotal(cfg.uCode, cfg.colorLabel));
-            qtyInput.className = 'replenish-qty-input';
-            qtyInput.title = '可单独调整该颜色补单量（按12的倍数分配至有库销尺码）';
-            qtyInput.dataset.replenishArticle = cfg.uCode;
-            qtyInput.dataset.replenishColor = cfg.colorLabel;
-            repCard.appendChild(repLabel);
-            repCard.appendChild(qtyInput);
-            const colorNameDiv = document.createElement('div');
-            colorNameDiv.className = 'text-gray-800 font-medium pt-1.5 border-t border-gray-200 w-full text-center';
-            colorNameDiv.innerText = cfg.colorLabel;
-            colorBox.appendChild(repCard);
-            colorBox.appendChild(colorNameDiv);
-            tdColor.appendChild(colorBox);
-            tr.appendChild(tdColor);
           }
+          tr.appendChild(tdToggle);
+
+          const tdCode = document.createElement('td');
+          tdCode.className = 'font-bold text-gray-900 border-t border-gray-200 align-top py-2.5';
+          tdCode.rowSpan = rowSpanCount;
+          const repChannel = getArticleReplenishmentChannel(cfg.uCode);
+          const repChannelBadge = repChannel
+            ? `<div class="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-semibold leading-tight" title="补单渠道：${repChannel}"><i class="fa-solid fa-truck-fast text-[10px] mr-1"></i>补单渠道：${repChannel}</div>`
+            : `<div class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-normal leading-tight">补单渠道：未配置</div>`;
+          const artRange = getArticleDateRange(cfg.uCode);
+          const dateBadge = artRange.isCustom
+            ? `<div class="px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-mono leading-tight" title="该款在按颜色视图设置了独立销售日期区间">${artRange.start} ~ ${artRange.end}</div>`
+            : '';
+          tdCode.innerHTML = `
+            <div class="flex flex-col items-start space-y-1.5">
+              ${repChannelBadge}
+              <button type="button" onclick="openStoreColorModal('${cfg.uCode}')" class="px-2.5 py-1 rounded border border-blue-300 hover:border-blue-500 bg-transparent text-blue-600 hover:text-blue-700 font-bold transition inline-flex items-center space-x-1.5 cursor-pointer" title="点击查看该款不同店铺归类与颜色的库销明细弹窗">
+                <span>${cfg.uCode}</span>
+                <i class="fa-solid fa-store text-[10px] text-blue-500"></i>
+              </button>
+              ${dateBadge}
+              <button type="button" onclick="printLandscapeSizeView('${cfg.uCode}')" class="no-print px-2 py-0.5 rounded border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-700 text-[11px] font-medium transition inline-flex items-center space-x-1 cursor-pointer" title="水平横向打印该款尺码配码表，方便截图">
+                <i class="fa-solid fa-print text-[10px]"></i>
+                <span>横向打印配码</span>
+              </button>
+            </div>
+          `;
+          tr.appendChild(tdCode);
+
+          const tdImg = document.createElement('td');
+          tdImg.className = 'border-t border-gray-200 text-center align-top py-2.5';
+          tdImg.rowSpan = rowSpanCount;
+          tdImg.innerHTML = `
+            <div onclick="openMonthlyTrendModal('${cfg.uCode}')" title="点击查看该款每月销量趋势图与各颜色月度销量占比矩阵" class="w-16 h-16 mx-auto rounded-lg overflow-hidden border border-gray-200 hover:border-sky-400 bg-gray-50 flex items-center justify-center cursor-pointer group shadow-xs" onmouseenter="showHoverImage(event, '${cfg.colorImg}', '${cfg.uCode} - ${cfg.colorLabel} (点击查看月度销量趋势)')" onmousemove="moveHoverImage(event)" onmouseleave="hideHoverImage()">
+              <img src="${cfg.colorImg}" alt="" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" onerror="this.src='https://placehold.co/80x80/f1f5f9/94a3b8?text=Color'" />
+            </div>
+          `;
+          tr.appendChild(tdImg);
+
+          const tdColor = document.createElement('td');
+          tdColor.className = 'text-gray-800 font-medium border-t border-gray-200 align-top py-2';
+          tdColor.rowSpan = rowSpanCount;
+          const colorBox = document.createElement('div');
+          colorBox.className = 'flex flex-col items-center space-y-2';
+          const repCard = document.createElement('div');
+          repCard.className = 'w-full rounded-lg border border-emerald-200 bg-emerald-50/50 p-1.5 flex flex-col items-center';
+          const repLabel = document.createElement('span');
+          repLabel.className = 'text-[10px] font-semibold text-emerald-700 mb-1';
+          repLabel.innerText = '补单数量';
+          const qtyInput = document.createElement('input');
+          qtyInput.type = 'number';
+          qtyInput.min = '0';
+          qtyInput.step = '12';
+          qtyInput.inputMode = 'numeric';
+          qtyInput.value = String(getColorReplenishmentTotal(cfg.uCode, cfg.colorLabel));
+          qtyInput.className = 'replenish-qty-input';
+          qtyInput.title = '可单独调整该颜色补单量（按12的倍数分配至有库销尺码，不会随下方单尺码修改而改变）';
+          qtyInput.dataset.replenishArticle = cfg.uCode;
+          qtyInput.dataset.replenishColor = cfg.colorLabel;
+          repCard.appendChild(repLabel);
+          repCard.appendChild(qtyInput);
+          const colorNameDiv = document.createElement('div');
+          colorNameDiv.className = 'text-gray-900 font-bold pt-1.5 border-t border-gray-200 w-full text-center';
+          colorNameDiv.innerText = cfg.colorLabel;
+          colorBox.appendChild(repCard);
+          colorBox.appendChild(colorNameDiv);
+          tdColor.appendChild(colorBox);
+          tr.appendChild(tdColor);
         }
 
         const tdMetric = document.createElement('td');
@@ -3599,7 +3281,14 @@
             }
           }
 
-          tdVal.innerHTML = fmtZeroEmpty(val, metric.isPct, metric.isDiff, szHasStock);
+          if (metric.isTotalStockShareOval) {
+            const pctText = fmtZeroEmpty(val, true, false, szHasStock);
+            tdVal.innerHTML = pctText
+              ? `<span class="inline-block px-2 py-0.5 rounded-full border-2 border-indigo-500 bg-indigo-50/70 text-indigo-800 font-bold text-xs leading-tight">${pctText}</span>`
+              : '';
+          } else {
+            tdVal.innerHTML = fmtZeroEmpty(val, metric.isPct, metric.isDiff, szHasStock);
+          }
           tr.appendChild(tdVal);
         });
 
@@ -3633,7 +3322,9 @@
         } else if (metric.key === 'inStockShare') {
           tdSum.innerText = cfg.inStockTotal > 0 ? '100.0%' : '';
         } else if (metric.key === 'totalStockShare') {
-          tdSum.innerText = cfg.stockTotal > 0 ? '100.0%' : '';
+          tdSum.innerHTML = cfg.stockTotal > 0
+            ? `<span class="inline-block px-2.5 py-0.5 rounded-full border-2 border-indigo-600 bg-indigo-50 text-indigo-900 font-bold text-xs leading-tight">100.0%</span>`
+            : '';
         } else {
           tdSum.innerText = '';
         }
@@ -3672,53 +3363,49 @@
         const sk = item.colorSkewInfo;
         const totalRowCount = hideTotalRow ? item.colors.length : (1 + item.colors.length);
 
-        let skewArticleBadgeHtml = '';
-        if (sk && sk.isSkewed) {
-          const isSev = sk.skewLevel === 'SEVERE';
-          const shortDesc = sk.shortColors.length > 0 ? `缺口:${sk.shortColors[0].color}(${sk.shortColors[0].diff.toFixed(1)}%)` : '';
-          const overDesc = sk.overColors.length > 0 ? `积压:${sk.overColors[0].color}(+${sk.overColors[0].diff.toFixed(1)}%)` : '';
-          const detailTip = [shortDesc, overDesc].filter(Boolean).join(' | ');
-          skewArticleBadgeHtml = `
-            <div class="mt-1 flex flex-col items-center space-y-0.5">
-              <span class="px-2 py-0.5 rounded-full text-[11px] font-bold border ${isSev ? 'bg-rose-100 text-rose-700 border-rose-300' : 'bg-amber-100 text-amber-800 border-amber-300'}" title="${detailTip}">
-                ⚠️ ${isSev ? '颜色重度下偏' : '颜色结构下偏'}
-              </span>
-              <span class="text-[10px] text-slate-500 font-normal max-w-[135px] truncate" title="${detailTip}">${detailTip}</span>
-            </div>
-          `;
-        } else if (item.colors.length > 1) {
-          skewArticleBadgeHtml = `
-            <span class="mt-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10.5px] font-semibold">
-              ✅ 颜色结构均衡
-            </span>
-          `;
-        }
-
         const createLeftMergedCells = (rSpan) => {
           const frag = document.createDocumentFragment();
 
           const tdIcon = document.createElement('td');
           tdIcon.className = 'text-center';
           tdIcon.rowSpan = rSpan;
-          tdIcon.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${sk && sk.isSkewed ? 'bg-rose-500' : 'bg-gray-400'} inline-block"></span>`;
+          tdIcon.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block"></span>`;
           frag.appendChild(tdIcon);
 
           const tdCodeAndImg = document.createElement('td');
-          tdCodeAndImg.className = 'font-bold text-center py-2.5';
+          tdCodeAndImg.className = 'font-bold text-center py-2 px-2';
           tdCodeAndImg.rowSpan = rSpan;
           tdCodeAndImg.innerHTML = `
             <div class="flex flex-col items-center justify-center space-y-1.5">
-              <button type="button" onclick="openArticleSizeModal('${uCode}')" class="px-2.5 py-1 rounded border border-blue-300 hover:border-blue-500 bg-transparent text-blue-600 hover:text-blue-700 font-bold transition flex items-center space-x-1.5 cursor-pointer" title="点击展开该款尺码销量与偏差详情">
+              <button type="button" onclick="openStoreColorModal('${uCode}')" class="px-2.5 py-1 rounded border border-blue-300 hover:border-blue-500 bg-transparent text-blue-600 hover:text-blue-700 font-bold transition flex items-center space-x-1.5 cursor-pointer" title="点击查看该款不同店铺归类与颜色的库销明细弹窗">
                 <span>${uCode}</span>
-                <i class="fa-solid fa-chevron-down text-[10px] text-blue-500"></i>
+                <i class="fa-solid fa-store text-[10px] text-blue-500"></i>
               </button>
-              <div onclick="openMonthlyTrendModal('${uCode}')" title="点击查看该款每月销量趋势图与各颜色月度销量占比矩阵" class="w-24 h-24 mx-auto rounded-xl overflow-hidden border border-gray-200 hover:border-sky-400 bg-gray-50 flex items-center justify-center cursor-pointer group shadow-xs" onmouseenter="showHoverImage(event, '${p ? p.imgUrl : ''}', '${uCode} (点击查看月度销量趋势)')" onmousemove="moveHoverImage(event)" onmouseleave="hideHoverImage()">
+              <div onclick="openMonthlyTrendModal('${uCode}')" title="点击查看该款每月销量趋势图与各颜色月度销量占比矩阵" class="w-20 h-20 mx-auto rounded-xl overflow-hidden border border-gray-200 hover:border-sky-400 bg-gray-50 flex items-center justify-center cursor-pointer group shadow-xs" onmouseenter="showHoverImage(event, '${p ? p.imgUrl : ''}', '${uCode} (点击查看月度销量趋势)')" onmousemove="moveHoverImage(event)" onmouseleave="hideHoverImage()">
                 <img src="${p ? p.imgUrl : ''}" alt="" class="w-full h-full object-cover group-hover:scale-110 transition duration-200" onerror="this.src='https://placehold.co/120x120/f1f5f9/94a3b8?text=Shoe'" />
               </div>
-              ${skewArticleBadgeHtml}
             </div>
           `;
           frag.appendChild(tdCodeAndImg);
+
+          const tdDateCol = document.createElement('td');
+          tdDateCol.className = 'text-center align-middle py-1.5 px-1.5 no-print';
+          tdDateCol.rowSpan = rSpan;
+          const artRange = getArticleDateRange(uCode);
+          const resetDateBtnHtml = artRange.isCustom
+            ? `<button type="button" onclick="resetArticleDateFilter('${uCode}')" class="text-[9px] text-amber-700 hover:text-rose-600 underline leading-none" title="恢复为顶部全局销售日期">重置</button>`
+            : '';
+          tdDateCol.innerHTML = `
+            <div class="inline-flex flex-col items-center w-[112px] p-1 rounded border ${artRange.isCustom ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200 bg-slate-50/60'} space-y-0.5">
+              <div class="w-full flex items-center justify-between px-0.5">
+                <span class="text-[9px] text-slate-500 font-medium leading-none">起始/截止</span>
+                ${resetDateBtnHtml}
+              </div>
+              <input type="date" value="${artRange.start}" onchange="setArticleDateFilter('${uCode}', 'start', this.value)" class="w-[104px] border border-slate-200 rounded px-1 py-0 text-[10px] font-mono text-slate-700 bg-white outline-none focus:border-sky-500 leading-tight h-5" title="调整该款起始销售日期（同步按尺码视图）" />
+              <input type="date" value="${artRange.end}" onchange="setArticleDateFilter('${uCode}', 'end', this.value)" class="w-[104px] border border-slate-200 rounded px-1 py-0 text-[10px] font-mono text-slate-700 bg-white outline-none focus:border-sky-500 leading-tight h-5" title="调整该款截止销售日期（同步按尺码视图）" />
+            </div>
+          `;
+          frag.appendChild(tdDateCol);
 
           return frag;
         };
@@ -3792,33 +3479,16 @@
           tdSalesShare.innerText = item.totalSales > 0 ? '100.0%' : '';
           trTotal.appendChild(tdSalesShare);
 
-          // 现库存占比
-          const tdInStockShare = document.createElement('td');
-          tdInStockShare.className = 'text-center font-mono font-bold';
-          tdInStockShare.innerText = item.totalInStock > 0 ? '100.0%' : '';
-          trTotal.appendChild(tdInStockShare);
-
           // 总库存占比
           const tdStockShare = document.createElement('td');
           tdStockShare.className = 'text-center font-mono font-bold';
           tdStockShare.innerText = item.totalStock > 0 ? '100.0%' : '';
           trTotal.appendChild(tdStockShare);
 
-          // 总库存库销差 (在整款总计行直观呈现该款是否发生颜色下偏)
+          // 总库存库销差 (总计行留空)
           const tdDiff = document.createElement('td');
           tdDiff.className = 'text-center font-mono font-bold';
-          if (sk && sk.isSkewed) {
-            const isSev = sk.skewLevel === 'SEVERE';
-            tdDiff.innerHTML = `
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${isSev ? 'bg-rose-100 text-rose-700 border border-rose-300' : 'bg-amber-100 text-amber-800 border border-amber-300'}">
-                ⚠️ 颜色下偏 (最大差${sk.maxAbsDiff.toFixed(1)}%)
-              </span>
-            `;
-          } else if (item.colors.length > 1 && (item.totalSales > 0 || item.totalStock > 0)) {
-            tdDiff.innerHTML = `<span class="text-xs text-emerald-600 font-semibold">颜色均衡</span>`;
-          } else {
-            tdDiff.innerText = '';
-          }
+          tdDiff.innerText = '';
           trTotal.appendChild(tdDiff);
 
           // 年售罄率 (低于30%底纹色突出强调)
@@ -3832,21 +3502,6 @@
           tdSellthrough.className = `text-center font-mono font-bold ${isLowTotalSellThrough ? 'bg-amber-100 text-amber-900' : ''}`;
           tdSellthrough.innerText = sellThroughTotal;
           trTotal.appendChild(tdSellthrough);
-
-          // 月存销比 (现库存 / 本月销量)
-          const ratioTotal = item.monthSales > 0 ? (item.totalInStock / item.monthSales).toFixed(1) : '';
-          const tdRatio = document.createElement('td');
-          tdRatio.className = 'text-center font-mono font-bold';
-          tdRatio.innerText = ratioTotal;
-          trTotal.appendChild(tdRatio);
-
-          // 划分 (低周转-低售罄底纹色突出强调)
-          const segmentTotal = (item.totalSales > 0 || item.totalStock > 0) ? getClassification(sellThroughTotal, ratioTotal) : '';
-          const tdSeg = document.createElement('td');
-          const isLowSegTotal = segmentTotal === '低周转-低售罄';
-          tdSeg.className = `text-center font-bold text-xs ${isLowSegTotal ? 'bg-rose-100 text-rose-700' : 'text-gray-700'}`;
-          tdSeg.innerText = segmentTotal;
-          trTotal.appendChild(tdSeg);
 
           // 本月销量
           const tdMonthSales = document.createElement('td');
@@ -3937,23 +3592,7 @@
           }
           trColor.appendChild(tdColSalesShare);
 
-          // 现库存占比 (胶囊型占比条)
-          const inStockPctVal = item.totalInStock > 0 ? (c.inStock / item.totalInStock) * 100 : 0;
-          const tdColInStockShare = document.createElement('td');
-          tdColInStockShare.className = 'text-center';
-          if (inStockPctVal > 0.05) {
-            tdColInStockShare.innerHTML = `
-              <div class="flex items-center justify-center space-x-2">
-                <span class="font-mono w-12 text-right">${inStockPctVal.toFixed(1)}%</span>
-                <div class="w-16 bg-gray-200 h-2.5 rounded-full overflow-hidden shrink-0">
-                  <div class="bg-sky-500 h-full rounded-full" style="width: ${Math.min(inStockPctVal, 100)}%"></div>
-                </div>
-              </div>
-            `;
-          } else {
-            tdColInStockShare.innerText = '';
-          }
-          trColor.appendChild(tdColInStockShare);
+
 
           // 总库存占比 (胶囊型占比条)
           const stockPctVal = item.totalStock > 0 ? (c.totalStock / item.totalStock) * 100 : 0;
@@ -3973,35 +3612,27 @@
           }
           trColor.appendChild(tdColStockShare);
 
-          // 总库存库销差 (正负轴条形图 + 数值 + 颜色下偏方向标签)
+          // 总库存库销差 (正负轴条形图 + 数值)
           const diffVal = stockPctVal - salesPctVal;
           const tdColDiff = document.createElement('td');
           tdColDiff.className = 'text-center font-mono font-medium';
           const barHalfPct = Math.min(Math.abs(diffVal), 50);
           let diffTextHtml = `<span class="text-gray-400 w-14 text-right"></span>`;
           let diffBarInner = '';
-          let skewDirTag = '';
           if (diffVal > 0.05) {
             diffTextHtml = `<span class="metric-blue w-14 text-right">+${diffVal.toFixed(2)}%</span>`;
             diffBarInner = `<div class="absolute top-0.5 bottom-0.5 bg-blue-500 rounded-r-full" style="left: 50%; width: ${barHalfPct}%;"></div>`;
-            if (item.colors.length > 1 && diffVal >= 5.0) {
-              skewDirTag = `<span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-300 text-[10px] font-bold shrink-0" title="总库存占比高于销量占比${diffVal.toFixed(1)}%，该颜色库存积压下偏">积压下偏</span>`;
-            }
           } else if (diffVal < -0.05) {
             diffTextHtml = `<span class="metric-red w-14 text-right">${diffVal.toFixed(2)}%</span>`;
             diffBarInner = `<div class="absolute top-0.5 bottom-0.5 bg-orange-500 rounded-l-full" style="right: 50%; width: ${barHalfPct}%;"></div>`;
-            if (item.colors.length > 1 && diffVal <= -5.0) {
-              skewDirTag = `<span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 border border-orange-300 text-[10px] font-bold shrink-0" title="总库存占比低于销量占比${Math.abs(diffVal).toFixed(1)}%，主销色缺口下偏">缺口下偏</span>`;
-            }
           }
           tdColDiff.innerHTML = `
             <div class="flex items-center justify-center space-x-1.5">
               ${diffTextHtml}
-              <div class="w-16 h-3 bg-slate-100 rounded-full relative overflow-hidden border border-slate-200 shrink-0" title="左负(缺口下偏) | 中轴0% | 右正(积压下偏)">
+              <div class="w-16 h-3 bg-slate-100 rounded-full relative overflow-hidden border border-slate-200 shrink-0" title="左负 | 中轴0% | 右正">
                 <div class="absolute inset-y-0 left-1/2 w-[1px] bg-slate-400 z-10"></div>
                 ${diffBarInner}
               </div>
-              ${skewDirTag}
             </div>
           `;
           trColor.appendChild(tdColDiff);
@@ -4018,20 +3649,7 @@
           tdColSell.innerText = cSellthroughVal;
           trColor.appendChild(tdColSell);
 
-          // 月存销比 (现库存 / 本月销量)
-          const cRatioVal = c.monthSales > 0 ? (c.inStock / c.monthSales).toFixed(1) : '';
-          const tdColRatio = document.createElement('td');
-          tdColRatio.className = 'text-center font-mono';
-          tdColRatio.innerText = cRatioVal;
-          trColor.appendChild(tdColRatio);
 
-          // 划分 (低周转-低售罄底纹色突出强调)
-          const cSeg = (c.sales > 0 || c.totalStock > 0) ? getClassification(cSellthroughVal, cRatioVal) : '';
-          const tdColSeg = document.createElement('td');
-          const isLowCSeg = cSeg === '低周转-低售罄';
-          tdColSeg.className = `text-center text-xs ${isLowCSeg ? 'bg-rose-100 text-rose-700 font-bold' : 'text-gray-600'}`;
-          tdColSeg.innerText = cSeg;
-          trColor.appendChild(tdColSeg);
 
           // 本月销量
           const tdColMSales = document.createElement('td');
@@ -4382,9 +4000,10 @@
       document.getElementById('modal-asc-ucode').innerText = uCode;
       document.getElementById('modal-asc-copy').onclick = () => copyText(uCode);
 
-      const startD = FILTERS.dateStart;
-      const endD = FILTERS.dateEnd;
-      document.getElementById('modal-asc-daterange').innerText = `${startD || '不限'} 至 ${endD || '不限'}`;
+      const artRange = getArticleDateRange(uCode);
+      const startD = artRange.start;
+      const endD = artRange.end;
+      document.getElementById('modal-asc-daterange').innerText = `${startD || '不限'} 至 ${endD || '不限'}${artRange.isCustom ? ' (单款独立区间)' : ''}`;
       document.getElementById('modal-asc-monthdate').innerText = STORE.currentMonthLatestDate || '当月最新';
 
       // 收集颜色库存映射
@@ -5059,9 +4678,21 @@
       populateMultiSelect('store', Array.from(STORE.stores).filter(s => s !== '所有'));
       populateMultiSelect('status', Array.from(STORE.statuses));
       populateMultiSelect('season', Array.from(STORE.seasons));
+      const chSet = new Set(Array.from(STORE.replenishChannels || []));
+      let hasUnconfigured = false;
+      for (const uCode of STORE.products.keys()) {
+        const ch = getArticleReplenishmentChannel(uCode);
+        if (ch) {
+          ch.split(' / ').map(s => s.trim()).filter(Boolean).forEach(p => chSet.add(p));
+        } else {
+          hasUnconfigured = true;
+        }
+      }
+      if (hasUnconfigured) chSet.add('未配置');
+      populateMultiSelect('replenishChannel', Array.from(chSet), true);
     }
 
-    function populateMultiSelect(filterKey, list) {
+    function populateMultiSelect(filterKey, list, searchable = false) {
       const container = document.querySelector(`.multi-select-container[data-filter-key="${filterKey}"]`);
       if (!container) return;
       const menu = container.querySelector('.multi-select-menu');
@@ -5087,16 +4718,29 @@
 
       menu.innerHTML = '';
 
-      // 顶部快捷操作栏：全选(所有) / 清空
+      if (searchable) {
+        const searchBox = document.createElement('div');
+        searchBox.className = 'px-2.5 py-1.5 border-b border-gray-100 sticky top-0 bg-white z-10';
+        searchBox.innerHTML = `
+          <div class="relative flex items-center">
+            <i class="fa-solid fa-magnifying-glass text-[10px] text-gray-400 absolute left-2"></i>
+            <input type="text" placeholder="搜索渠道关键字..." class="ms-search-input w-full pl-6 pr-2 py-1 text-xs border border-gray-200 rounded bg-slate-50 focus:bg-white focus:border-amber-500 outline-none" />
+          </div>
+        `;
+        menu.appendChild(searchBox);
+      }
+
+      // 顶部快捷操作栏：全选 / 清空
       const actionRow = document.createElement('div');
       actionRow.className = 'flex items-center justify-between px-3 py-1.5 border-b border-gray-100 text-[11px] text-gray-500';
       actionRow.innerHTML = `
-        <button type="button" class="hover:text-amber-600 font-medium btn-ms-all">全部(所有)</button>
-        <button type="button" class="hover:text-rose-600 btn-ms-clear">清空选择</button>
+        <button type="button" class="hover:text-amber-600 font-medium btn-ms-all">全选</button>
+        <button type="button" class="hover:text-rose-600 btn-ms-clear">清空(所有)</button>
       `;
       menu.appendChild(actionRow);
 
       const checkboxes = [];
+      const rowElements = [];
 
       cleanList.forEach(item => {
         const lbl = document.createElement('label');
@@ -5115,6 +4759,7 @@
         });
 
         checkboxes.push(cb);
+        rowElements.push({ item, lbl, cb });
         const span = document.createElement('span');
         span.className = 'truncate';
         span.innerText = item;
@@ -5123,9 +4768,21 @@
         menu.appendChild(lbl);
       });
 
+      const searchInput = menu.querySelector('.ms-search-input');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          const kw = e.target.value.trim().toLowerCase();
+          rowElements.forEach(({ item, lbl }) => {
+            lbl.classList.toggle('hidden', Boolean(kw) && !item.toLowerCase().includes(kw));
+          });
+        });
+      }
+
       actionRow.querySelector('.btn-ms-all').addEventListener('click', () => {
-        checkboxes.forEach(c => c.checked = false);
-        FILTERS[filterKey] = [];
+        rowElements.forEach(({ lbl, cb }) => {
+          if (!lbl.classList.contains('hidden')) cb.checked = true;
+        });
+        FILTERS[filterKey] = checkboxes.filter(c => c.checked).map(c => c.value);
         updateLabel();
         FILTERS.currentPage = 1;
         renderAll(true);
@@ -5183,6 +4840,7 @@
         STORE.replenishmentChannelMap.set('G15M852058', '全渠道核心主推补单');
         STORE.replenishmentChannelMap.set('G16S852004', '抖音/唯品会专供补单');
         STORE.replenishmentChannelMap.set('G16S852070', '天猫旗舰店补单');
+        STORE.replenishChannels = new Set(['天猫/京东自营补单', '全渠道核心主推补单', '抖音/唯品会专供补单', '天猫旗舰店补单']);
 
         const shoeImg1 = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f8fafc"/><path d="M15,65 Q30,40 50,45 Q70,48 85,60 Q75,75 50,75 Q25,75 15,65 Z" fill="%23b45309"/><path d="M25,60 Q45,35 60,40 Q75,45 80,58 Z" fill="%23fef3c7"/><circle cx="50" cy="50" r="4" fill="%2378350f"/><text x="50" y="88" font-size="9" text-anchor="middle" fill="%2394a3b8" font-family="sans-serif">CAMEL G15</text></svg>`;
         const shoeImg2 = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f8fafc"/><path d="M15,65 Q30,40 50,45 Q70,48 85,60 Q75,75 50,75 Q25,75 15,65 Z" fill="%23374151"/><path d="M25,60 Q45,35 60,40 Q75,45 80,58 Z" fill="%239ca3af"/><circle cx="50" cy="50" r="4" fill="%23111827"/><text x="50" y="88" font-size="9" text-anchor="middle" fill="%2394a3b8" font-family="sans-serif">CAMEL G16</text></svg>`;
@@ -5327,6 +4985,205 @@
     /**
      * 导出当前筛选结果为Excel：按尺码矩阵、颜色补单分配、颜色分析三张工作表。
      */
+    function loadSavedSnapshotsList() {
+      try {
+        const raw = localStorage.getItem(SAVE_HISTORY_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            MEMORY_SAVE_SNAPSHOTS = parsed.slice(0, 5);
+            return MEMORY_SAVE_SNAPSHOTS;
+          }
+        }
+      } catch (e) {
+        // fallback to in-memory array
+      }
+      return MEMORY_SAVE_SNAPSHOTS;
+    }
+
+    function persistSnapshotsList(list) {
+      MEMORY_SAVE_SNAPSHOTS = list.slice(0, 5);
+      try {
+        localStorage.setItem(SAVE_HISTORY_KEY, JSON.stringify(MEMORY_SAVE_SNAPSHOTS));
+      } catch (e) {
+        // ignore storage quota errors in sandbox
+      }
+      renderSaveHistoryMenu();
+    }
+
+    function serializeReplenishState() {
+      const obj = {};
+      REPLENISH_STATE.forEach((articleState, uCode) => {
+        const colorsObj = {};
+        if (articleState.byColor) {
+          articleState.byColor.forEach((cState, color) => {
+            const sizesObj = {};
+            if (cState.sizes) {
+              cState.sizes.forEach((qty, sz) => { sizesObj[sz] = qty; });
+            }
+            colorsObj[color] = { total: cState.total || 0, sizes: sizesObj };
+          });
+        }
+        obj[uCode] = {
+          fixedTotal: articleState.fixedTotal,
+          byColor: colorsObj
+        };
+      });
+      return obj;
+    }
+
+    function restoreReplenishStateFromSerialized(serialized) {
+      REPLENISH_STATE.clear();
+      if (!serialized || typeof serialized !== 'object') return;
+      Object.entries(serialized).forEach(([uCode, aState]) => {
+        const byColorMap = new Map();
+        if (aState && aState.byColor) {
+          Object.entries(aState.byColor).forEach(([color, cState]) => {
+            const szMap = new Map();
+            if (cState && cState.sizes) {
+              Object.entries(cState.sizes).forEach(([sz, qty]) => szMap.set(sz, Number(qty) || 0));
+            }
+            byColorMap.set(color, { total: Number(cState.total) || 0, sizes: szMap });
+          });
+        }
+        REPLENISH_STATE.set(uCode, {
+          fixedTotal: aState.fixedTotal !== undefined ? aState.fixedTotal : null,
+          byColor: byColorMap
+        });
+      });
+    }
+
+    function saveSystemSnapshot() {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const timeLabel = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+      const items = CACHED_AGG_ITEMS || computeAggregations();
+      let totalReplenishQty = 0;
+      items.forEach(it => { totalReplenishQty += (it.totalReplenishment || 0); });
+
+      const articleDatesObj = {};
+      ARTICLE_DATE_FILTERS.forEach((v, k) => { articleDatesObj[k] = { ...v }; });
+
+      const snapshot = {
+        id: 'snap_' + now.getTime(),
+        timestamp: timeLabel,
+        articleCount: items.length,
+        totalReplenishQty,
+        filters: {
+          articleCodes: [...FILTERS.articleCodes],
+          category: [...FILTERS.category],
+          store: [...FILTERS.store],
+          dateStart: FILTERS.dateStart,
+          dateEnd: FILTERS.dateEnd,
+          status: [...FILTERS.status],
+          season: [...FILTERS.season],
+          replenishChannel: [...(FILTERS.replenishChannel || [])],
+          sortBy: FILTERS.sortBy,
+          activeTab: FILTERS.activeTab
+        },
+        articleDates: articleDatesObj,
+        replenishState: serializeReplenishState()
+      };
+
+      const list = loadSavedSnapshotsList();
+      const updated = [snapshot, ...list].slice(0, 5);
+      persistSnapshotsList(updated);
+      showToast(`已保存当前配码补单记录 (${timeLabel})，当前共保存 ${updated.length}/5 条记录`);
+    }
+
+    function restoreSystemSnapshot(snapId) {
+      const list = loadSavedSnapshotsList();
+      const snap = list.find(s => s.id === snapId);
+      if (!snap) return;
+
+      if (snap.filters) {
+        FILTERS.articleCodes = [...(snap.filters.articleCodes || [])];
+        FILTERS.category = [...(snap.filters.category || [])];
+        FILTERS.store = [...(snap.filters.store || [])];
+        FILTERS.dateStart = snap.filters.dateStart || FILTERS.dateStart;
+        FILTERS.dateEnd = snap.filters.dateEnd || FILTERS.dateEnd;
+        FILTERS.status = [...(snap.filters.status || [])];
+        FILTERS.season = [...(snap.filters.season || [])];
+        FILTERS.replenishChannel = [...(snap.filters.replenishChannel || [])];
+        FILTERS.sortBy = snap.filters.sortBy || 'sales_desc';
+        document.getElementById('filter-article-input').value = FILTERS.articleCodes.join(' ');
+        document.getElementById('filter-date-start').value = FILTERS.dateStart;
+        document.getElementById('filter-date-end').value = FILTERS.dateEnd;
+        document.getElementById('filter-sort').value = FILTERS.sortBy;
+      }
+
+      ARTICLE_DATE_FILTERS.clear();
+      if (snap.articleDates) {
+        Object.entries(snap.articleDates).forEach(([k, v]) => {
+          ARTICLE_DATE_FILTERS.set(k, { ...v });
+        });
+      }
+
+      restoreReplenishStateFromSerialized(snap.replenishState);
+      updateDropdownOptions();
+      if (snap.filters && snap.filters.activeTab) {
+        switchTab(snap.filters.activeTab);
+      }
+      renderAll(true);
+      const menu = document.getElementById('save-history-menu');
+      if (menu) menu.classList.add('hidden');
+      showToast(`已恢复至 ${snap.timestamp} 的保存内容`);
+    }
+
+    function deleteSystemSnapshot(snapId, evt) {
+      if (evt) evt.stopPropagation();
+      const list = loadSavedSnapshotsList().filter(s => s.id !== snapId);
+      persistSnapshotsList(list);
+      showToast('已删除该条保存记录');
+    }
+
+    function toggleSaveHistoryMenu(evt) {
+      if (evt) evt.stopPropagation();
+      const menu = document.getElementById('save-history-menu');
+      if (!menu) return;
+      renderSaveHistoryMenu();
+      menu.classList.toggle('hidden');
+    }
+
+    function renderSaveHistoryMenu() {
+      const list = loadSavedSnapshotsList();
+      const badge = document.getElementById('save-history-count-badge');
+      if (badge) badge.innerText = `${list.length}/5`;
+      const container = document.getElementById('save-history-list');
+      if (!container) return;
+
+      if (list.length === 0) {
+        container.innerHTML = `<div class="px-4 py-6 text-center text-xs text-slate-400">暂无保存记录，点击左侧「保存记录」可保存近5次不同时间段的配码补单状态</div>`;
+        return;
+      }
+
+      container.innerHTML = list.map((snap, idx) => `
+        <div class="px-3.5 py-2.5 hover:bg-indigo-50/60 transition flex items-center justify-between gap-2 cursor-pointer" onclick="restoreSystemSnapshot('${snap.id}')">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center space-x-1.5">
+              <span class="px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 font-mono text-[10px] font-bold">#${idx + 1}</span>
+              <span class="text-xs font-bold text-slate-800 font-mono">${snap.timestamp}</span>
+            </div>
+            <div class="text-[11px] text-slate-500 mt-0.5 truncate">
+              款数: <strong class="text-slate-700">${snap.articleCount}</strong> 款 | 补单合计: <strong class="text-emerald-700 font-mono">${(snap.totalReplenishQty || 0).toLocaleString()}</strong>
+            </div>
+          </div>
+          <div class="flex items-center space-x-1 shrink-0">
+            <span class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-semibold">恢复</span>
+            <button type="button" onclick="deleteSystemSnapshot('${snap.id}', event)" class="w-6 h-6 rounded hover:bg-rose-100 text-slate-400 hover:text-rose-600 flex items-center justify-center transition" title="删除此条记录">
+              <i class="fa-solid fa-trash-can text-[10px]"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.saveSystemSnapshot = saveSystemSnapshot;
+    window.restoreSystemSnapshot = restoreSystemSnapshot;
+    window.deleteSystemSnapshot = deleteSystemSnapshot;
+    window.toggleSaveHistoryMenu = toggleSaveHistoryMenu;
+
     function exportToExcel() {
       if (typeof XLSX === 'undefined') {
         showToast('Excel导出组件未加载，请检查网络后刷新页面', true);
@@ -5375,7 +5232,7 @@
       ];
 
       const matrixRows = [
-        ['商品智能制动化补货系统 - 按尺码矩阵'],
+        ['商品智能化配码补单系统 - 按尺码矩阵'],
         ['导出日期', new Date().toLocaleString('zh-CN')],
         ['筛选条件', filterParts.join('；') || '无额外筛选'],
         ['库存公式', '总库存 = 现库存 + 未出 + 补单数量 - 缺货数量'],
@@ -5523,7 +5380,7 @@
       XLSX.utils.book_append_sheet(wb, wsMatrix, '按尺码矩阵');
 
       const wsReplenish = XLSX.utils.aoa_to_sheet([
-        ['商品智能制动化补货系统 - 颜色补单分配明细'],
+        ['商品智能化配码补单系统 - 颜色补单分配明细'],
         ['颜色补单量必须为12的倍数；按尺码分配数量以2的倍数为单位进行智能分配。'],
         ['货号', '颜色', '颜色销量', '颜色销量占比', '现库存', '未出', '缺货数量', '颜色补单量(12的倍数)', '颜色总库存(含补单)'],
         ...replenishmentRows.slice(1)
@@ -5534,7 +5391,7 @@
       XLSX.utils.book_append_sheet(wb, wsReplenish, '颜色补单分配');
 
       const wsColor = XLSX.utils.aoa_to_sheet([
-        ['商品智能制动化补货系统 - 颜色结构分析'],
+        ['商品智能化配码补单系统 - 颜色结构分析'],
         ['筛选条件', filterParts.join('；') || '无额外筛选'],
         colorAnalysisRows[0],
         ...colorAnalysisRows.slice(1)
@@ -5578,7 +5435,7 @@
         if (cell && typeof cell.v === 'number') cell.z = '0.0%';
       }
 
-      const fileName = `商品智能制动化补货系统_${dateStamp}.xlsx`;
+      const fileName = `商品智能化配码补单系统_${dateStamp}.xlsx`;
       try {
         XLSX.writeFile(wb, fileName, { compression: true });
         showToast(`Excel已导出：${exportItems.length}款商品，含尺码矩阵、颜色补单分配和颜色分析`);
