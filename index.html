@@ -1557,8 +1557,9 @@
       const qty = unit > 1 ? normalizeReplenishmentQty(quantity, unit) : Math.max(0, Math.round(Number(quantity) || 0));
       const allSizeEntries = STORE.availableSizes.map(size => {
         const sizeData = colorData.sizeBreakdown.get(size) || {};
-        const sales = Number(sizeData.sales) || 0;
-        const monthSales = Number(sizeData.monthSales) || 0;
+        // 补单数量计算始终基于全渠道销量(allStoreSales)，不受顶部「平台/店铺」筛选影响
+        const sales = (sizeData.allStoreSales !== undefined) ? (Number(sizeData.allStoreSales) || 0) : (Number(sizeData.sales) || 0);
+        const monthSales = (sizeData.allStoreMonthSales !== undefined) ? (Number(sizeData.allStoreMonthSales) || 0) : (Number(sizeData.monthSales) || 0);
         const inStock = Number(sizeData.inStock) || 0;
         const inTransit = Number(sizeData.inTransit) || 0;
         const out = Number(sizeData.out) || 0;
@@ -1595,9 +1596,10 @@
       articleState.fixedTotal = totalQty;
       const colorEntries = colors.map(c => {
         const baseStock = (Number(c.inStock) || 0) + (Number(c.inTransit) || 0) - (Number(c.out) || 0);
+        const sales = (c.allStoreSales !== undefined) ? (Number(c.allStoreSales) || 0) : (Number(c.sales) || 0);
         return {
           key: c.color,
-          sales: Number(c.sales) || 0,
+          sales,
           baseStock,
           stockWeight: Math.max(0, baseStock)
         };
@@ -2650,12 +2652,43 @@
       const currentMonthPrefix = currentMonthLatestDate ? currentMonthLatestDate.substring(0, 7) : '';
       const targetYear = endD ? endD.substring(0, 4) : '';
 
+      const allStoreSalesAgg = new Map();
+
       for (let i = 0; i < STORE.salesList.length; i++) {
         const row = STORE.salesList[i];
         if (!validArticleSet.has(row.uCode)) continue;
-        if (hasStoreFilter && !storeFilterSet.has(row.storeClass)) continue;
 
         const qty = Number(row.sales) || 0;
+        const artDate = ARTICLE_DATE_FILTERS.get(row.uCode);
+        const effStartD = (artDate && artDate.start) ? artDate.start : startD;
+        const effEndD = (artDate && artDate.end) ? artDate.end : endD;
+        const isCurrentMonthRow = currentMonthPrefix && row.dateStr && row.dateStr.startsWith(currentMonthPrefix) && row.dateStr <= currentMonthLatestDate;
+        const inSelectedDateRange = !(effStartD && row.dateStr && row.dateStr < effStartD) && !(effEndD && row.dateStr && row.dateStr > effEndD);
+
+        // 统计不受「平台/店铺」筛选影响的全渠道销量（用于补单数量计算，确保筛选平台/店铺时补单数量计算不发生改变）
+        if (inSelectedDateRange || isCurrentMonthRow) {
+          let allAData = allStoreSalesAgg.get(row.uCode);
+          if (!allAData) {
+            allAData = { colors: new Map(), totalSales: 0 };
+            allStoreSalesAgg.set(row.uCode, allAData);
+          }
+          let allCData = allAData.colors.get(row.color);
+          if (!allCData) {
+            allCData = { sizes: new Map(), monthSizes: new Map(), sales: 0, monthSales: 0 };
+            allAData.colors.set(row.color, allCData);
+          }
+          if (isCurrentMonthRow) {
+            allCData.monthSales += qty;
+            allCData.monthSizes.set(row.size, (allCData.monthSizes.get(row.size) || 0) + qty);
+          }
+          if (inSelectedDateRange) {
+            allCData.sizes.set(row.size, (allCData.sizes.get(row.size) || 0) + qty);
+            allCData.sales += qty;
+            allAData.totalSales += qty;
+          }
+        }
+
+        if (hasStoreFilter && !storeFilterSet.has(row.storeClass)) continue;
 
         if (!targetYear || !row.yearStr || row.yearStr === targetYear) {
           let yData = yearSalesAgg.get(row.uCode);
@@ -2667,11 +2700,6 @@
           yData.colorYearSales.set(row.color, (yData.colorYearSales.get(row.color) || 0) + qty);
         }
 
-        const artDate = ARTICLE_DATE_FILTERS.get(row.uCode);
-        const effStartD = (artDate && artDate.start) ? artDate.start : startD;
-        const effEndD = (artDate && artDate.end) ? artDate.end : endD;
-        const isCurrentMonthRow = currentMonthPrefix && row.dateStr && row.dateStr.startsWith(currentMonthPrefix) && row.dateStr <= currentMonthLatestDate;
-        const inSelectedDateRange = !(effStartD && row.dateStr && row.dateStr < effStartD) && !(effEndD && row.dateStr && row.dateStr > effEndD);
         if (!isCurrentMonthRow && !inSelectedDateRange) continue;
 
         let aData = salesAgg.get(row.uCode);
@@ -2701,9 +2729,13 @@
       for (const uCode of validArticles) {
         const pInfo = STORE.products.get(uCode);
         const sAgg = salesAgg.get(uCode) || { colors: new Map(), totalSales: 0, monthSales: 0 };
+        const allStoreAgg = allStoreSalesAgg.get(uCode) || { colors: new Map(), totalSales: 0 };
         const yData = yearSalesAgg.get(uCode) || { totalYearSales: sAgg.totalSales, colorYearSales: new Map() };
 
-        const allColorsSet = new Set(Array.from(sAgg.colors.keys()));
+        const allColorsSet = new Set([
+          ...Array.from(sAgg.colors.keys()),
+          ...Array.from(allStoreAgg.colors.keys())
+        ]);
         const indexedColors = STORE.stockColorsByArticle.get(uCode);
         if (indexedColors) {
           for (const col of indexedColors) allColorsSet.add(col);
@@ -2728,7 +2760,9 @@
 
         for (const color of allColorsSet) {
           const cSalesData = sAgg.colors.get(color) || { sizes: new Map(), monthSizes: new Map(), sales: 0, monthSales: 0 };
+          const allCSalesData = allStoreAgg.colors.get(color) || { sizes: new Map(), monthSizes: new Map(), sales: 0, monthSales: 0 };
           const cSales = cSalesData.sales;
+          const cAllStoreSales = allCSalesData.sales;
           const cMonthSales = cSalesData.monthSales;
           const cYearSales = yData.colorYearSales.get(color) ?? cSales;
 
@@ -2744,13 +2778,17 @@
             const sVal = STORE.stockMap.get(key) || { inStock: 0, inTransit: 0 };
             const oVal = STORE.outMap.get(key) || 0;
             const sizeSale = cSalesData.sizes.get(size) || 0;
+            const sizeAllStoreSale = allCSalesData.sizes.get(size) || 0;
             const sizeMonthSale = cSalesData.monthSizes ? (cSalesData.monthSizes.get(size) || 0) : 0;
+            const sizeAllStoreMonthSale = allCSalesData.monthSizes ? (allCSalesData.monthSizes.get(size) || 0) : 0;
             const sizeReplenishment = getReplenishmentQty(uCode, color, size);
             const sizeTotStock = sVal.inStock + sVal.inTransit + sizeReplenishment - oVal;
 
             sizeBreakdown.set(size, {
               sales: sizeSale,
+              allStoreSales: sizeAllStoreSale,
               monthSales: sizeMonthSale,
+              allStoreMonthSales: sizeAllStoreMonthSale,
               inStock: sVal.inStock,
               inTransit: sVal.inTransit,
               out: oVal,
@@ -2785,6 +2823,7 @@
           colorList.push({
             color,
             sales: cSales,
+            allStoreSales: cAllStoreSales,
             yearSales: cYearSales,
             inStock: cInStock,
             inTransit: cInTransit,
@@ -3079,13 +3118,12 @@
 
       const metricDefs = [
         { key: 'sales', label: '期间销量', isPct: false },
-        { key: 'monthSales', label: '本月销量', isPct: false, isMonthSalesHighlight: true },
+        { key: 'salesShare', label: '销量占比', isPct: true },
         { key: 'inStock', label: '现库存', isPct: false },
         { key: 'inTransit', label: '未出', isPct: false },
         { key: 'out', label: '缺货数量', isPct: false, isWarning: true },
         { key: 'replenishment', label: '补单数量', isPct: false, isReplenishment: true },
         { key: 'totalStock', label: '总库存', isPct: false },
-        { key: 'salesShare', label: '销量占比', isPct: true },
         { key: 'totalStockShare', label: '总库存占比', isPct: true, isTotalStockShareOval: true },
         { key: 'diffShare', label: '总库销占比差', isPct: true, isDiff: true, isTotalStockDiffHighlight: true }
       ];
@@ -3105,7 +3143,6 @@
         const totStock = cfg.sizesTotalStock.get(sz) || 0;
 
         valuesMap.sales[sz] = s;
-        valuesMap.monthSales[sz] = mSale;
         valuesMap.inStock[sz] = curStock;
         valuesMap.inTransit[sz] = transitStock;
         valuesMap.out[sz] = o;
@@ -3233,7 +3270,7 @@
 
           if (metric.isReplenishment) {
             const hasStockOrSales = (valuesMap.sales[sz] || 0) > 0
-              || (valuesMap.monthSales[sz] || 0) > 0
+              || (cfg.sizesMonthSales && (cfg.sizesMonthSales.get(sz) || 0) > 0)
               || (valuesMap.inStock[sz] || 0) > 0
               || (valuesMap.inTransit[sz] || 0) > 0
               || (valuesMap.totalStock[sz] || 0) > 0;
