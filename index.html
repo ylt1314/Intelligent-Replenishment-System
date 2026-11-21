@@ -270,17 +270,84 @@
       box-shadow: 0 1px 2px rgba(245, 158, 11, 0.25);
     }
     
-    /* 浅色调商务智能(BI)线条网格背景 */
+    /* 浅色调3D科技感网格与粒子背景 */
     .tech-login-bg {
-      background-color: #f8fafc;
+      background:
+        radial-gradient(circle at 18% 20%, rgba(56, 189, 248, 0.16) 0%, transparent 45%),
+        radial-gradient(circle at 82% 80%, rgba(99, 102, 241, 0.14) 0%, transparent 48%),
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9) 0%, #f1f5f9 100%);
+      perspective: 1200px;
+    }
+
+    /* 3D 透视地面网格 */
+    .tech-3d-floor {
+      position: absolute;
+      left: -20%;
+      right: -20%;
+      bottom: -18%;
+      height: 55%;
       background-image:
-        radial-gradient(at 12% 18%, rgba(14, 165, 233, 0.09) 0px, transparent 48%),
-        radial-gradient(at 88% 82%, rgba(37, 99, 235, 0.08) 0px, transparent 48%),
-        linear-gradient(to right, rgba(148, 163, 184, 0.16) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(148, 163, 184, 0.16) 1px, transparent 1px),
-        linear-gradient(to right, rgba(203, 213, 225, 0.18) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(203, 213, 225, 0.18) 1px, transparent 1px);
-      background-size: 100% 100%, 100% 100%, 144px 144px, 144px 144px, 24px 24px, 24px 24px;
+        linear-gradient(to right, rgba(14, 165, 233, 0.15) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(14, 165, 233, 0.15) 1px, transparent 1px);
+      background-size: 48px 48px;
+      transform: rotateX(68deg);
+      transform-origin: center bottom;
+      mask-image: linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 90%);
+      -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 90%);
+      animation: floorGridMove 12s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes floorGridMove {
+      0% { background-position: 0 0, 0 0; }
+      100% { background-position: 0 48px, 0 48px; }
+    }
+
+    /* 3D 悬浮立体登录卡片 */
+    .login-3d-stage {
+      perspective: 1400px;
+    }
+    .login-3d-card {
+      transform-style: preserve-3d;
+      transition: transform 0.18s ease-out, box-shadow 0.25s ease;
+      box-shadow:
+        0 30px 70px -18px rgba(14, 165, 233, 0.22),
+        0 14px 32px -12px rgba(15, 23, 42, 0.12),
+        inset 0 1px 1px rgba(255, 255, 255, 0.95);
+    }
+    .login-3d-layer {
+      transform: translateZ(18px);
+    }
+
+    /* 顶部扫描光束与跳动频谱线条 */
+    @keyframes scanBeam {
+      0% { transform: translateX(-100%); opacity: 0.2; }
+      50% { opacity: 1; }
+      100% { transform: translateX(220%); opacity: 0.2; }
+    }
+    .tech-scan-beam {
+      animation: scanBeam 3.6s ease-in-out infinite;
+    }
+    @keyframes jumpBar {
+      0%, 100% { transform: scaleY(0.35); opacity: 0.55; }
+      50% { transform: scaleY(1); opacity: 1; }
+    }
+    .jump-bar {
+      transform-origin: bottom;
+      animation: jumpBar 1.5s ease-in-out infinite;
+    }
+    @keyframes pulseDash {
+      to { stroke-dashoffset: -48; }
+    }
+    .tech-pulse-line {
+      stroke-dasharray: 10 6;
+      animation: pulseDash 1.8s linear infinite;
+    }
+    @keyframes floatBadge {
+      0%, 100% { transform: translateY(0px) translateZ(24px); }
+      50% { transform: translateY(-4px) translateZ(24px); }
+    }
+    .float-3d-badge {
+      animation: floatBadge 3.5s ease-in-out infinite;
     }
 
     /* 水平横向打印与单款配码截图专属样式 */
@@ -327,127 +394,146 @@
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans min-h-screen flex flex-col">
-  <!-- 浅色调商务智能(BI)线条感登录封面 -->
+  <!-- 浅色调3D立体感与动态粒子线条科技登录封面 -->
   <section id="login-cover" class="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 tech-login-bg overflow-hidden">
-    <!-- 商务智能建筑感矢量线条背景 -->
-    <svg class="absolute inset-0 w-full h-full pointer-events-none opacity-80" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <!-- 3D 透视动态流动地面网格 -->
+    <div class="tech-3d-floor"></div>
+
+    <!-- 动态粒子连线与跳动光束 Canvas -->
+    <canvas id="login-particle-canvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+
+    <!-- 科技感矢量流动折线背景 -->
+    <svg class="absolute inset-0 w-full h-full pointer-events-none opacity-85" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="bi-line-blue" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#0284c7" stop-opacity="0.04" />
-          <stop offset="50%" stop-color="#0284c7" stop-opacity="0.32" />
-          <stop offset="100%" stop-color="#2563eb" stop-opacity="0.06" />
+          <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.06" />
+          <stop offset="50%" stop-color="#0284c7" stop-opacity="0.45" />
+          <stop offset="100%" stop-color="#4f46e5" stop-opacity="0.08" />
         </linearGradient>
         <linearGradient id="bi-line-slate" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#94a3b8" stop-opacity="0.06" />
-          <stop offset="50%" stop-color="#64748b" stop-opacity="0.22" />
-          <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.05" />
+          <stop offset="0%" stop-color="#94a3b8" stop-opacity="0.08" />
+          <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.28" />
+          <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.06" />
         </linearGradient>
       </defs>
-      <!-- 坐标参考线与数据折线 -->
-      <path d="M-40,160 L260,160 L340,96 L780,96 L860,160 L1480,160" fill="none" stroke="url(#bi-line-blue)" stroke-width="1.25" />
-      <path d="M-40,740 L320,740 L410,660 L980,660 L1070,740 L1480,740" fill="none" stroke="url(#bi-line-blue)" stroke-width="1.25" />
+      <path d="M-40,150 L240,150 L320,86 L790,86 L870,150 L1480,150" fill="none" stroke="url(#bi-line-blue)" stroke-width="1.4" />
+      <path d="M-40,150 L240,150 L320,86 L790,86 L870,150 L1480,150" fill="none" stroke="#38bdf8" stroke-opacity="0.55" stroke-width="2" class="tech-pulse-line" />
+      <path d="M-40,750 L310,750 L400,670 L990,670 L1080,750 L1480,750" fill="none" stroke="url(#bi-line-blue)" stroke-width="1.4" />
+      <path d="M-40,750 L310,750 L400,670 L990,670 L1080,750 L1480,750" fill="none" stroke="#6366f1" stroke-opacity="0.45" stroke-width="2" class="tech-pulse-line" />
       <path d="M180,0 L180,900" fill="none" stroke="url(#bi-line-slate)" stroke-width="1" stroke-dasharray="5 5" />
       <path d="M1260,0 L1260,900" fill="none" stroke="url(#bi-line-slate)" stroke-width="1" stroke-dasharray="5 5" />
-      <!-- BI 趋势波段折线 -->
-      <polyline points="60,520 180,470 290,490 420,410 540,435 660,350" fill="none" stroke="#38bdf8" stroke-opacity="0.28" stroke-width="1.5" />
-      <polyline points="880,320 1010,275 1130,295 1260,210 1390,230" fill="none" stroke="#3b82f6" stroke-opacity="0.24" stroke-width="1.5" />
-      <!-- 节点与准星 -->
-      <circle cx="340" cy="96" r="3" fill="#0284c7" fill-opacity="0.45" />
-      <circle cx="780" cy="96" r="3" fill="#0284c7" fill-opacity="0.45" />
-      <circle cx="410" cy="660" r="3" fill="#2563eb" fill-opacity="0.4" />
-      <circle cx="980" cy="660" r="3" fill="#2563eb" fill-opacity="0.4" />
-      <circle cx="420" cy="410" r="3.5" fill="#ffffff" stroke="#0284c7" stroke-width="1.5" stroke-opacity="0.55" />
-      <circle cx="1260" cy="210" r="3.5" fill="#ffffff" stroke="#2563eb" stroke-width="1.5" stroke-opacity="0.55" />
+      <circle cx="320" cy="86" r="3.5" fill="#0ea5e9" fill-opacity="0.6" />
+      <circle cx="790" cy="86" r="3.5" fill="#4f46e5" fill-opacity="0.6" />
+      <circle cx="400" cy="670" r="3.5" fill="#2563eb" fill-opacity="0.55" />
+      <circle cx="990" cy="670" r="3.5" fill="#0ea5e9" fill-opacity="0.55" />
     </svg>
 
-    <!-- 商务智能双栏线框容器 -->
-    <div class="relative w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 rounded-2xl border border-slate-200/90 bg-white/90 shadow-[0_24px_64px_-16px_rgba(15,23,42,0.10)] backdrop-blur-xl overflow-hidden">
-      <!-- 顶部极细商务蓝渐变线条 -->
-      <div class="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-sky-400 via-blue-600 to-indigo-500"></div>
+    <!-- 3D 立体倾斜舞台 -->
+    <div class="login-3d-stage relative w-full max-w-4xl z-10">
+      <!-- 3D 悬浮背板阴影层 -->
+      <div class="absolute -inset-2 rounded-3xl bg-gradient-to-br from-sky-300/30 via-white/40 to-indigo-300/30 blur-xl pointer-events-none"></div>
 
-      <!-- 左侧：商务智能数据线框展示区 -->
-      <div class="hidden md:flex md:col-span-6 flex-col justify-between p-8 bg-gradient-to-br from-slate-50/95 via-white to-sky-50/60 border-r border-slate-200/80 relative">
-        <div>
-          <div class="inline-flex items-center space-x-2 px-2.5 py-1 rounded-full border border-sky-200 bg-white text-[11px] font-semibold text-sky-700 tracking-wide">
-            <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
-            <span>BUSINESS INTELLIGENCE SUITE</span>
-          </div>
-          <h2 class="mt-5 text-2xl font-bold text-slate-900 tracking-tight leading-snug">商品智能化配码补单系统</h2>
-          <p class="mt-2 text-xs text-slate-500 leading-relaxed">面向鞋服多色多尺码的精细化库销诊断与智能补单工作台，支持多表关联聚合与实时交互测算。</p>
+      <div id="login-3d-card" class="login-3d-card relative w-full grid grid-cols-1 md:grid-cols-12 rounded-2xl border border-sky-200/80 bg-white/88 backdrop-blur-2xl overflow-hidden">
+        <!-- 四角科技感折角准星 -->
+        <span class="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-sky-500/70 rounded-tl pointer-events-none z-20"></span>
+        <span class="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-indigo-500/70 rounded-tr pointer-events-none z-20"></span>
+        <span class="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-sky-500/70 rounded-bl pointer-events-none z-20"></span>
+        <span class="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-indigo-500/70 rounded-br pointer-events-none z-20"></span>
+
+        <!-- 顶部扫描光束 -->
+        <div class="absolute top-0 inset-x-0 h-[2.5px] bg-slate-100 overflow-hidden z-20">
+          <div class="w-1/2 h-full bg-gradient-to-r from-transparent via-sky-500 to-indigo-500 tech-scan-beam"></div>
         </div>
 
-        <!-- 商务智能线条图谱装饰卡 -->
-        <div class="my-6 rounded-xl border border-slate-200/90 bg-white/95 p-4 shadow-2xs">
-          <div class="flex items-center justify-between text-[11px] text-slate-500 pb-2.5 border-b border-slate-100">
-            <span class="font-semibold text-slate-700">SKU 库销平衡趋势矩阵</span>
-            <span class="font-mono text-sky-600">REAL-TIME BI</span>
-          </div>
-          <svg viewBox="0 0 320 110" class="w-full h-24 mt-2" xmlns="http://www.w3.org/2000/svg">
-            <line x1="0" y1="25" x2="320" y2="25" stroke="#f1f5f9" stroke-width="1" />
-            <line x1="0" y1="55" x2="320" y2="55" stroke="#f1f5f9" stroke-width="1" />
-            <line x1="0" y1="85" x2="320" y2="85" stroke="#e2e8f0" stroke-width="1" />
-            <rect x="18" y="54" width="14" height="31" rx="2" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1" />
-            <rect x="62" y="42" width="14" height="43" rx="2" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1" />
-            <rect x="106" y="30" width="14" height="55" rx="2" fill="#bae6fd" stroke="#38bdf8" stroke-width="1" />
-            <rect x="150" y="22" width="14" height="63" rx="2" fill="#bae6fd" stroke="#0284c7" stroke-width="1" />
-            <rect x="194" y="34" width="14" height="51" rx="2" fill="#e0f2fe" stroke="#38bdf8" stroke-width="1" />
-            <rect x="238" y="48" width="14" height="37" rx="2" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1" />
-            <rect x="282" y="60" width="14" height="25" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" />
-            <polyline points="25,48 69,36 113,25 157,16 201,28 245,40 289,52" fill="none" stroke="#0284c7" stroke-width="1.8" />
-            <circle cx="157" cy="16" r="3" fill="#ffffff" stroke="#0284c7" stroke-width="1.8" />
-            <circle cx="113" cy="25" r="2.5" fill="#ffffff" stroke="#0284c7" stroke-width="1.5" />
-            <circle cx="201" cy="28" r="2.5" fill="#ffffff" stroke="#0284c7" stroke-width="1.5" />
-          </svg>
-          <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
-            <div class="px-1.5 py-1 rounded bg-slate-50 border border-slate-100">
-              <div class="text-[10px] text-slate-400">尺码预警</div>
-              <div class="text-[11px] font-bold text-slate-700 mt-0.5">断码天数测算</div>
+        <!-- 左侧：3D 商务智能动态数据看板展示区 -->
+        <div class="hidden md:flex md:col-span-6 flex-col justify-between p-8 bg-gradient-to-br from-sky-50/80 via-white/95 to-indigo-50/70 border-r border-slate-200/80 relative">
+          <div class="login-3d-layer">
+            <div class="float-3d-badge inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-sky-200 bg-white/95 shadow-sm text-[11px] font-semibold text-sky-700 tracking-wide">
+              <span class="w-2 h-2 rounded-full bg-sky-500 animate-ping"></span>
+              <span>INTELLIGENT BI MATRIX · 3D ENGINE</span>
             </div>
-            <div class="px-1.5 py-1 rounded bg-slate-50 border border-slate-100">
-              <div class="text-[10px] text-slate-400">颜色结构</div>
-              <div class="text-[11px] font-bold text-slate-700 mt-0.5">库销差监控</div>
+            <h2 class="mt-5 text-2xl font-bold text-slate-900 tracking-tight leading-snug">商品智能化配码补单系统</h2>
+            <p class="mt-2 text-xs text-slate-500 leading-relaxed">面向鞋服多色多尺码的精细化库销诊断与智能补单工作台，支持多表秒级聚合与实时交互测算。</p>
+          </div>
+
+          <!-- 3D 跳动频谱与趋势线条图谱卡 -->
+          <div class="my-5 rounded-xl border border-sky-200/70 bg-white/95 p-4 shadow-[0_14px_30px_-10px_rgba(14,165,233,0.18)] login-3d-layer">
+            <div class="flex items-center justify-between text-[11px] text-slate-500 pb-2 border-b border-slate-100">
+              <span class="font-semibold text-slate-700 flex items-center space-x-1.5">
+                <i class="fa-solid fa-wave-square text-sky-500"></i>
+                <span>动态库销脉搏波段</span>
+              </span>
+              <span class="font-mono text-sky-600 font-bold">LIVE SYNC</span>
             </div>
-            <div class="px-1.5 py-1 rounded bg-slate-50 border border-slate-100">
-              <div class="text-[10px] text-slate-400">补单分配</div>
-              <div class="text-[11px] font-bold text-slate-700 mt-0.5">按销占比拆分</div>
+
+            <!-- 跳动频谱柱与流动趋势线 -->
+            <div class="mt-3 relative h-24 flex items-end justify-between gap-1.5 px-2 pb-1 border-b border-slate-100">
+              <div class="w-3 h-10 rounded-t bg-gradient-to-t from-sky-400 to-cyan-300 jump-bar" style="animation-delay: 0s;"></div>
+              <div class="w-3 h-16 rounded-t bg-gradient-to-t from-sky-500 to-blue-400 jump-bar" style="animation-delay: 0.15s;"></div>
+              <div class="w-3 h-12 rounded-t bg-gradient-to-t from-indigo-400 to-sky-300 jump-bar" style="animation-delay: 0.3s;"></div>
+              <div class="w-3 h-20 rounded-t bg-gradient-to-t from-blue-600 to-sky-400 jump-bar" style="animation-delay: 0.45s;"></div>
+              <div class="w-3 h-14 rounded-t bg-gradient-to-t from-sky-500 to-cyan-300 jump-bar" style="animation-delay: 0.6s;"></div>
+              <div class="w-3 h-18 rounded-t bg-gradient-to-t from-indigo-500 to-blue-400 jump-bar" style="animation-delay: 0.75s;"></div>
+              <div class="w-3 h-9 rounded-t bg-gradient-to-t from-sky-400 to-cyan-300 jump-bar" style="animation-delay: 0.9s;"></div>
+              <div class="w-3 h-16 rounded-t bg-gradient-to-t from-blue-500 to-sky-300 jump-bar" style="animation-delay: 1.05s;"></div>
+              <div class="w-3 h-11 rounded-t bg-gradient-to-t from-indigo-400 to-sky-300 jump-bar" style="animation-delay: 1.2s;"></div>
+              <div class="w-3 h-15 rounded-t bg-gradient-to-t from-sky-500 to-cyan-400 jump-bar" style="animation-delay: 1.35s;"></div>
+              <svg viewBox="0 0 280 80" class="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
+                <polyline points="8,54 38,34 68,46 98,18 128,36 158,22 188,52 218,30 248,44 274,26" fill="none" stroke="#0284c7" stroke-width="2" class="tech-pulse-line" />
+              </svg>
             </div>
+
+            <div class="grid grid-cols-3 gap-2 pt-2.5 text-center">
+              <div class="px-1.5 py-1.5 rounded-lg bg-slate-50/90 border border-slate-200/60 shadow-2xs">
+                <div class="text-[10px] text-slate-400">尺码配比</div>
+                <div class="text-[11px] font-bold text-slate-700 mt-0.5">最小库销差</div>
+              </div>
+              <div class="px-1.5 py-1.5 rounded-lg bg-slate-50/90 border border-slate-200/60 shadow-2xs">
+                <div class="text-[10px] text-slate-400">颜色矩阵</div>
+                <div class="text-[11px] font-bold text-slate-700 mt-0.5">多维趋势图</div>
+              </div>
+              <div class="px-1.5 py-1.5 rounded-lg bg-slate-50/90 border border-slate-200/60 shadow-2xs">
+                <div class="text-[10px] text-slate-400">智能补单</div>
+                <div class="text-[11px] font-bold text-slate-700 mt-0.5">12期快照存档</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-200/70 pt-3">
+            <span><i class="fa-solid fa-shield-halved text-sky-600 mr-1"></i>本地离线加密引擎</span>
+            <span class="font-mono text-sky-700/80">V3.0 · 3D QUANT BI</span>
           </div>
         </div>
 
-        <div class="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-200/70 pt-3">
-          <span><i class="fa-solid fa-shield-halved text-sky-600 mr-1"></i>本地离线加密引擎</span>
-          <span class="font-mono">V2.6 · ENTERPRISE BI</span>
+        <!-- 右侧：3D 立体登录表单区 -->
+        <div class="md:col-span-6 p-8 md:p-10 flex flex-col justify-center bg-white/95 login-3d-layer">
+          <div class="flex items-center space-x-3 mb-6">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl border border-sky-200 bg-gradient-to-br from-sky-50 to-indigo-50 text-sky-600 text-xl shadow-[0_6px_16px_-4px_rgba(14,165,233,0.28)]">
+              <i class="fa-solid fa-cube"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-slate-900">工作台账号登录</h3>
+              <p class="text-[11px] text-slate-400 tracking-wider uppercase">SKU COLOR &amp; SIZE ANALYTICS</p>
+            </div>
+          </div>
+          <form id="login-form" class="space-y-4">
+            <div>
+              <label for="login-account" class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase tracking-wide">登录账号</label>
+              <select id="login-account" class="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-800 shadow-[inset_0_2px_4px_rgba(15,23,42,0.04)] outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100">
+                <option value="14599">14599</option>
+                <option value="095男鞋">095男鞋</option>
+                <option value="10211">10211</option>
+              </select>
+            </div>
+            <div>
+              <label for="login-password" class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase tracking-wide">登录密码</label>
+              <input id="login-password" type="password" autocomplete="current-password" placeholder="请输入登录密码" class="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-800 shadow-[inset_0_2px_4px_rgba(15,23,42,0.04)] outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100" required />
+            </div>
+            <p id="login-error" class="hidden text-xs text-rose-500 font-medium">账号或密码不正确，请重新输入。</p>
+            <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_-6px_rgba(37,99,235,0.45),inset_0_1px_1px_rgba(255,255,255,0.4)] transition transform hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-6px_rgba(37,99,235,0.55)] active:translate-y-0">登 录 系 统</button>
+          </form>
+          <p class="mt-6 text-center text-[11px] text-slate-400">数据仅在当前浏览器本地安全处理，无外网传输</p>
         </div>
-      </div>
-
-      <!-- 右侧：登录表单区 -->
-      <div class="md:col-span-6 p-8 md:p-10 flex flex-col justify-center bg-white">
-        <div class="flex items-center space-x-3 mb-6">
-          <div class="flex h-11 w-11 items-center justify-center rounded-xl border border-sky-200 bg-sky-50 text-sky-600 text-lg">
-            <i class="fa-solid fa-chart-line"></i>
-          </div>
-          <div>
-            <h3 class="text-lg font-bold text-slate-900">工作台账号登录</h3>
-            <p class="text-[11px] text-slate-400 tracking-wider uppercase">SKU COLOR &amp; SIZE ANALYTICS</p>
-          </div>
-        </div>
-        <form id="login-form" class="space-y-4">
-          <div>
-            <label for="login-account" class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase tracking-wide">登录账号</label>
-            <select id="login-account" class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100">
-              <option value="14599">14599</option>
-              <option value="095男鞋">095男鞋</option>
-              <option value="10211">10211</option>
-            </select>
-          </div>
-          <div>
-            <label for="login-password" class="mb-1.5 block text-xs font-semibold text-slate-600 uppercase tracking-wide">登录密码</label>
-            <input id="login-password" type="password" autocomplete="current-password" placeholder="请输入登录密码" class="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-100" required />
-          </div>
-          <p id="login-error" class="hidden text-xs text-rose-500 font-medium">账号或密码不正确，请重新输入。</p>
-          <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-sky-200/70 transition hover:from-sky-500 hover:to-blue-500">登 录 系 统</button>
-        </form>
-        <p class="mt-6 text-center text-[11px] text-slate-400">数据仅在当前浏览器本地安全处理，无外网传输</p>
       </div>
     </div>
   </section>
@@ -1702,7 +1788,116 @@
       STORE.currentMonthLatestDate = latestInThisMonth || globalLatestDate;
     }
 
+    function initLoginParticleAnd3D() {
+      const cover = document.getElementById('login-cover');
+      const canvas = document.getElementById('login-particle-canvas');
+      const card = document.getElementById('login-3d-card');
+      if (!cover || !canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      let width = 0;
+      let height = 0;
+      let particles = [];
+      let mouse = { x: -9999, y: -9999 };
+      let rafId = null;
+
+      function resizeCanvas() {
+        width = cover.clientWidth || window.innerWidth;
+        height = cover.clientHeight || window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        const count = Math.min(72, Math.max(32, Math.floor((width * height) / 22000)));
+        particles = Array.from({ length: count }, () => ({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: (Math.random() - 0.5) * 0.65,
+          vy: (Math.random() - 0.5) * 0.65,
+          r: 1.5 + Math.random() * 2.2,
+          phase: Math.random() * Math.PI * 2
+        }));
+      }
+
+      function drawFrame() {
+        if (cover.classList.contains('hidden')) {
+          rafId = null;
+          return;
+        }
+        ctx.clearRect(0, 0, width, height);
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.phase += 0.04;
+          if (p.x < 0 || p.x > width) p.vx *= -1;
+          if (p.y < 0 || p.y > height) p.vy *= -1;
+
+          const dxm = p.x - mouse.x;
+          const dym = p.y - mouse.y;
+          const distM = Math.hypot(dxm, dym);
+          if (distM > 0 && distM < 130) {
+            p.x += (dxm / distM) * 0.8;
+            p.y += (dym / distM) * 0.8;
+          }
+
+          const pulseR = p.r + Math.sin(p.phase) * 0.55;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, Math.max(0.8, pulseR), 0, Math.PI * 2);
+          ctx.fillStyle = i % 3 === 0 ? 'rgba(79, 70, 229, 0.45)' : 'rgba(14, 165, 233, 0.52)';
+          ctx.fill();
+
+          for (let j = i + 1; j < particles.length; j++) {
+            const q = particles[j];
+            const dx = p.x - q.x;
+            const dy = p.y - q.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 145) {
+              const alpha = (1 - dist / 145) * 0.28;
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(q.x, q.y);
+              ctx.strokeStyle = `rgba(14, 165, 233, ${alpha.toFixed(3)})`;
+              ctx.lineWidth = 1;
+              ctx.stroke();
+            }
+          }
+        }
+        rafId = requestAnimationFrame(drawFrame);
+      }
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+      cover.addEventListener('mousemove', (e) => {
+        const rect = cover.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+        if (card) {
+          const cx = rect.width / 2;
+          const cy = rect.height / 2;
+          const rotY = ((mouse.x - cx) / cx) * 4.5;
+          const rotX = -((mouse.y - cy) / cy) * 4.5;
+          card.style.transform = `rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`;
+        }
+      });
+      cover.addEventListener('mouseleave', () => {
+        mouse.x = -9999;
+        mouse.y = -9999;
+        if (card) card.style.transform = 'rotateX(0deg) rotateY(0deg)';
+      });
+
+      const observer = new MutationObserver(() => {
+        if (!cover.classList.contains('hidden') && !rafId) {
+          resizeCanvas();
+          rafId = requestAnimationFrame(drawFrame);
+        }
+      });
+      observer.observe(cover, { attributes: true, attributeFilter: ['class'] });
+
+      rafId = requestAnimationFrame(drawFrame);
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
+      initLoginParticleAnd3D();
       initEventListeners();
       document.getElementById('login-form').addEventListener('submit', (e) => {
         e.preventDefault();
